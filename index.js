@@ -54,10 +54,12 @@ import shopifyRouter from "./src/app/auth/auth.routes.js"
 import quizRouter from "./src/app/quiz/quiz.routes.js"
 import authRouter from "./src/app/auth/auth.routes.js"
 
+
 // ==== Private Routes ==== //
 app.use("/api/auth",authRouter)
 app.use("/shopify",shopifyRouter)
 app.use("/quiz",quizRouter)
+
 
 
 // ==== Error Handeling ==== //
