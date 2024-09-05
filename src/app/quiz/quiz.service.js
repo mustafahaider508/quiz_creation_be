@@ -1,33 +1,45 @@
 import axios from "axios";
-const generateQuiz = async (prompt) => {
+import prisma from "../../../config/db.js";
+const generateQuiz = async (url) => {
+  console.log("url",url)
   try {
     const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You are a quiz generator." },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 150,
-        n: 1,
-        stop: null,
-        temperature: 0.7,
-      },
+      url,
       {
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           "Content-Type": "application/json",
         },
       }
+      
     );
-    console.log("res", response.data.choices);
-    return response.data.choices;
+    return response.data;
   } catch (error) {
     console.error("Error generating quiz:", error);
     throw error;
   }
 };
+
+const generateQuizbyFile = async (url, formData) => {
+  try {
+    const response = await axios.post(url,formData ,{
+      headers: {
+        "Content-Type": "multipart/form-data",
+        "Content-Type": "application/json",
+  
+      },
+    
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error generating quiz:", error.message);
+    throw error;
+  }
+};
+
+const saveQuiz = async(req,res) => {
+  return prisma
+
+}
 
 const createCanvaDesign = async (templateId, quizQuestions) => {
   try {
@@ -45,6 +57,7 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
         headers: {
           Authorization: `Bearer ${process.env.CANVA_API_KEY}`,
           "Content-Type": "application/json",
+         
         },
       }
     );
@@ -58,5 +71,6 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
 const quizService = {
   generateQuiz,
   createCanvaDesign,
+  generateQuizbyFile
 };
 export default quizService;

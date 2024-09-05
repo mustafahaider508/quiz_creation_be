@@ -1,6 +1,10 @@
 import quizServive from "./quiz.service.js";
+import axios from "axios";
+import fs from "fs";
+import prisma from "../../../config/db.js";
+import { authorize, listSlides } from "../../../utils/slide.js";
 
-const { generateQuiz, createCanvaDesign } = quizServive;
+const { generateQuiz, createCanvaDesign, generateQuizbyFile } = quizServive;
 
 //Upload
 export const getCanvaTemplate = async (req, res) => {
@@ -14,33 +18,68 @@ export const getCanvaTemplate = async (req, res) => {
     throw error;
   }
 };
-export const generatingQuiz = async (req, res, next) => {
+export const generatingQuizByText = async (req, res, next) => {
   try {
-    const { topic, numQuestions } = req.body;
-
-    if (!topic || !numQuestions) {
-      return res
-        .status(400)
-        .json({ error: "Please provide topic and number of questions." });
+    const { userId, text, no_of_questions, difficulty_level } = req.body;
+    const url = `http://100.27.81.124/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const quiz = await generateQuiz(url, userId);
+    const saveQuiz = await prisma.quiz.create({
+      data: {
+        userId,
+        quizData: quiz?.data,
+      },
+    });
+    if(saveQuiz){
+      authorize().then(listSlides).catch(console.error);
     }
-    let templateId =
-      "EAFn8wt0TqQ-blue-yellow-and-white-playful-illustrative-quiz-time-instagram-post";
-    const prompt = `Generate ${numQuestions} quiz questions on the topic of ${topic}.`;
-    const quizQuestions = await generateQuiz(prompt);
-    // const canvaDesign = await createCanvaDesign(templateId, quizQuestions);
-    //    return  res.json({ canvaDesign });
-    return res.json({ quizQuestions });
+    return res.status(200).json({
+      message: "Quiz generated Successfully ",
+      data: saveQuiz,
+    });
   } catch (error) {
-    if (
-      error?.response &&
-      error?.response?.data?.error?.code === "insufficient_quota"
-    ) {
-      return res.status(429).json({
-        error:
-          "You have exceeded your quota. Please check your OpenAI plan and billing details.",
-      });
-    } else {
-      res.status(500).json({ error: "Internal Server Error" });
-    }
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const generatingQuizByLink = async (req, res, next) => {
+  try {
+    const { userId, quiz_creation_youtube, no_of_questions, difficulty_level } =
+      req.body;
+    const url = `http://100.27.81.124/quiz_creation_youtube?youtube_url=${quiz_creation_youtube}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const quiz = await generateQuiz(url, userId);
+    console.log("quiz link",quiz)
+    const saveQuiz = await prisma.quiz.create({
+      data: {
+        userId,
+        quizData: quiz?.data,
+      },
+    });
+    return res.status(200).json({
+      message: "Quiz generated Successfully",
+      data: saveQuiz,
+    });
+  } catch (error) {
+    console.error("Error in generating quiz:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const generatingQuizByFile = async (req, res, next) => {
+  try {
+    const { userId, data } = req.body;
+    const quiz = await prisma.quiz.create({
+      data: {
+        quizData: data,
+        userId,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Quiz generated",
+      data: quiz,
+    });
+  } catch (error) {
+    console.error("Error in generating quiz:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };

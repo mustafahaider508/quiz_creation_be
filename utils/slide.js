@@ -18,7 +18,7 @@ const SCOPES = [
 const TOKEN_PATH = path.join(process.cwd(), "token.json");
 const CREDENTIALS_PATH = path.join(process.cwd(), "credentials.json");
 
-const loadSavedCredentialsIfExist = async () => {
+export const loadSavedCredentialsIfExist = async () => {
   try {
     const content = await fs.readFile(TOKEN_PATH, "utf-8");
     const credentials = JSON.parse(content);
@@ -28,7 +28,7 @@ const loadSavedCredentialsIfExist = async () => {
   }
 };
 
-const saveCredentials = async (client) => {
+export const saveCredentials = async (client) => {
   const content = await fs.readFile(CREDENTIALS_PATH, "utf-8");
   const keys = JSON.parse(content);
   const key = keys.installed || keys.web;
@@ -41,7 +41,7 @@ const saveCredentials = async (client) => {
   await fs.writeFile(TOKEN_PATH, payload);
 };
 
-const authorize = async () => {
+export const authorize = async () => {
   let client = await loadSavedCredentialsIfExist();
   if (client) {
     return client;
@@ -56,15 +56,14 @@ const authorize = async () => {
   return client;
 };
 
-const listSlides = async (auth) => {
+export const listSlides = async (auth) => {
   const slidesApi = google.slides({ version: "v1", auth });
   const res = await slidesApi.presentations.get({
     // presentationId: "1EAYk18WDjIG-zp_0vLm3CsfQh_i8eXc67Jo2O9C6Vuc",
     presentationId: "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM",
   });
   const slides = res.data.slides;
-
-
+  console.log("slides",slides?.length)
 
   if (!slides || slides.length === 0) {
     console.log("No slides found.");
@@ -74,7 +73,7 @@ const listSlides = async (auth) => {
   return slides;
 };
 
-async function injectDataIntoSlide(auth) {
+export async function injectDataIntoSlide(auth) {
   let presentationId = "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM";
   let sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
   let sheetName = "Ark1";
@@ -90,7 +89,6 @@ async function injectDataIntoSlide(auth) {
   });
 
   const data = sheetResponse.data.values;
-  console.log("Sheet data:", data);
 
   if (!data || data.length === 0) {
     console.log("No data found in the sheet.");
@@ -108,16 +106,8 @@ async function injectDataIntoSlide(auth) {
 
   const quizData = [
     ["1", "New RowData:", "New RowData1:", "New RowData2:", "New RowData3:"],
-    [
-      "2",
-      "What is the best music genre in the world?",
-      "Azaz",
-      "Punk",
-      "Rock",
-    ],
+    ["2", "What is the best music genre in the world?", "Azaz", "Ali", "Khan"],
   ];
-
-  console.log("slides+++++",slides[0]?.pageElements)
 
   slides.forEach((slide, slideIndex) => {
     console.log(`Processing slide #${slideIndex + 1}`);
@@ -131,7 +121,7 @@ async function injectDataIntoSlide(auth) {
 
     // Filter and map text boxes
     const textBoxIds = slide.pageElements
-      .filter((el) => el.shape && el.shape.shapeType ) // Ensure it's a text box with text
+      .filter((el) => el.shape && el.shape.shapeType) // Ensure it's a text box with text
       .map((el) => el.objectId);
 
     console.log("TextBox IDs:", textBoxIds);
@@ -216,5 +206,5 @@ async function injectDataIntoSlide(auth) {
 
 // Usage example:
 // You would call this function from your main script
-authorize().then(listSlides).catch(console.error);
-authorize().then(injectDataIntoSlide).catch(console.error);
+// authorize().then(listSlides).catch(console.error);
+// authorize().then(injectDataIntoSlide).catch(console.error);
