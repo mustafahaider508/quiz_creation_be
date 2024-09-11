@@ -4,7 +4,7 @@ import {
   generatingQuizByLink,
   generatingQuizByFile,
 } from "./quiz.controller.js";
-import multer from "multer";
+
 
 const router = express.Router();
 

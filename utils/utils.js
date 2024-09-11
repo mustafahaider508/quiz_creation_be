@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
 import nodemailer from "nodemailer";
+
 
 // Get Password Hash
 export const getPasswordHash = async (password) => {
@@ -91,6 +91,13 @@ export const sendEmail = (data) => {
       subject: data?.subject,
       text: "",
       html: data?.html,
+      attachments: [
+        {
+          filename: "quiz.pdf", 
+          content: data?.pdfFilePath,
+          contentType: "application/pdf", 
+        },
+      ],
     };
 
     transporter.sendMail(mailOptions, (error, info) => {

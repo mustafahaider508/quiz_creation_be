@@ -3,6 +3,7 @@ import path from "path";
 import process from "process";
 import { authenticate } from "@google-cloud/local-auth";
 import { google } from "googleapis";
+import { createWriteStream } from 'fs'; // For writeStream
 
 // If modifying these scopes, delete token.json.
 const SCOPES = [
@@ -11,6 +12,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/spreadsheets.readonly",
+  "https://www.googleapis.com/auth/drive"
 ];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
@@ -63,7 +65,7 @@ export const listSlides = async (auth) => {
     presentationId: "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM",
   });
   const slides = res.data.slides;
-  console.log("slides",slides?.length)
+  console.log("slides", slides?.length);
 
   if (!slides || slides.length === 0) {
     console.log("No slides found.");
@@ -73,13 +75,12 @@ export const listSlides = async (auth) => {
   return slides;
 };
 
-export async function injectDataIntoSlide(auth) {
+export async function injectDataIntoSlide(auth, quizData) {
   let presentationId = "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM";
   let sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
   let sheetName = "Ark1";
   const sheetsService = google.sheets({ version: "v4", auth });
   const slidesService = google.slides({ version: "v1", auth });
-
   const sheetRange = `${sheetName}!A1:Z1000`;
 
   // Fetch data from Google Sheets
@@ -104,10 +105,10 @@ export async function injectDataIntoSlide(auth) {
 
   const requests = [];
 
-  const quizData = [
-    ["1", "New RowData:", "New RowData1:", "New RowData2:", "New RowData3:"],
-    ["2", "What is the best music genre in the world?", "Azaz", "Ali", "Khan"],
-  ];
+  // const quizData = [
+  //   ["1", "New RowData:", "New But:", "New but2:", "New but3:"],
+  //   ["2", "What is the best music genre in the world?", "Azaz", "Ali", "Khan"],
+  // ];
 
   slides.forEach((slide, slideIndex) => {
     console.log(`Processing slide #${slideIndex + 1}`);
@@ -199,9 +200,55 @@ export async function injectDataIntoSlide(auth) {
       },
     });
     console.log("Data injected successfully");
+    return {
+      message: "Data injected successfully",
+    };
   } catch (err) {
     console.error("Error injecting data:", err);
   }
+}
+
+export async function exportSlidesToPDF(auth) {
+
+  try {
+    const presentationId = "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM";
+  const drive = google.drive({ version: "v3", auth });
+
+  // Export the presentation as a PDF
+  const pdf = await drive.files.export(
+    {
+      fileId: presentationId,
+      mimeType: "application/pdf",
+    },
+    { responseType: "stream" }
+  );
+
+  // Create the file path to save the PDF on your Node.js server
+  const filePath = path.join(path.resolve(), `presentation.pdf`);
+  const dest = createWriteStream(filePath);
+
+  // Save the PDF stream to the file
+  pdf.data.pipe(dest);
+  return {
+    message: "Presentation exported as PDF and saved to the server",
+  };
+    
+  } catch (error) {
+    console.error('Error exporting PDF:', error);
+    return error
+  }
+  
+  //   return new Promise((resolve, reject) => {
+  //     dest.on('finish', () => {
+  //       console.log('Presentation exported as PDF and saved to the server:', filePath);
+  //       resolve();
+  //     });
+
+  //     dest.on('error', (err) => {
+  //       console.error('Error exporting PDF:', err);
+  //       reject(err);
+  //     });
+  //   });
 }
 
 // Usage example:

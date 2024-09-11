@@ -47,6 +47,10 @@ build/Release
 # Dependency directories
 node_modules/
 .env
+presentation.pdf
+slidesPdf.js
+server.js
+
 
 # Optional npm cache directory
 .npm
