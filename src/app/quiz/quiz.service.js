@@ -1,17 +1,61 @@
 import axios from "axios";
-import prisma from "../../../config/db.js";
+import {
+  authorize,
+  injectDataIntoSlide,
+  exportSlidesToPDF,
+} from "../../../utils/slide.js";
+import { sendEmail } from "../../../utils/utils.js";
+import path from "path";
+import fs from "fs";
+import process from "process";
+
+export const generatePdfWithInjectedData = async (quizData,email) => {
+  const auth = await authorize();
+  const injectResponse = await injectDataIntoSlide(auth, quizData);
+  if (injectResponse) {
+    const pdfResponse = await exportSlidesToPDF(auth);
+    console.log("pdfResponse", pdfResponse);
+    if (pdfResponse?.message) {
+      setTimeout(() => {
+        const pdfFilePath = path.join(process.cwd(), "presentation.pdf");
+        fs.readFile(pdfFilePath, async (err, pdfData) => {
+          if (err) {
+            console.log("Error reading PDF file:", err);
+            return;
+          }
+          console.log("reading Pdf File....", pdfData);
+          const emailData = {
+            to: email,
+            subject: "Quiz",
+            html: "",
+            pdfFilePath: pdfData,
+          };
+          await sendEmail(emailData);
+        });
+      }, 1000);
+    }
+  }
+};
+
+
+export const makeQuizDataFormate = (quizData) => {
+  const data = quizData["QUIZ QUESTIONS & ANSWERS"]?.map(
+    (ele, index) => {
+      const question = ele[`Question ${index + 1}`];
+      const options = ele["Options"] ? Object.values(ele["Options"]) : [];
+      return [(index + 1).toString(), question, ...options];
+    }
+  );
+  return data
+}
+
 const generateQuiz = async (url) => {
-  console.log("url",url)
   try {
-    const response = await axios.post(
-      url,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-      
-    );
+    const response = await axios.post(url, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
     return response.data;
   } catch (error) {
     console.error("Error generating quiz:", error);
@@ -21,13 +65,11 @@ const generateQuiz = async (url) => {
 
 const generateQuizbyFile = async (url, formData) => {
   try {
-    const response = await axios.post(url,formData ,{
+    const response = await axios.post(url, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
         "Content-Type": "application/json",
-  
       },
-    
     });
     return response.data;
   } catch (error) {
@@ -35,11 +77,6 @@ const generateQuizbyFile = async (url, formData) => {
     throw error;
   }
 };
-
-const saveQuiz = async(req,res) => {
-  return prisma
-
-}
 
 const createCanvaDesign = async (templateId, quizQuestions) => {
   try {
@@ -57,7 +94,6 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
         headers: {
           Authorization: `Bearer ${process.env.CANVA_API_KEY}`,
           "Content-Type": "application/json",
-         
         },
       }
     );
@@ -71,6 +107,6 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
 const quizService = {
   generateQuiz,
   createCanvaDesign,
-  generateQuizbyFile
+  generateQuizbyFile,
 };
 export default quizService;
