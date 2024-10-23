@@ -6,6 +6,7 @@ dotenv.config({ silent: process.env.NODE_ENV === "production" });
 
 const app = express();
 const PORT = process.env.PORT;
+
 // for parsing application/json
 app.use(express.json());
 
@@ -15,7 +16,17 @@ app.use(
     extended: true,
   })
 );
+
+// ==== CORS Policy ==== //
+var corsOptions = {
+  origin: true, // Allow requests from any domain
+  allowedHeaders: ["content-type"],
+  credentials: true,
+};
+
 app.use(cors(corsOptions));
+
+// ==== Session Configuration ==== //
 app.use(
   session({
     secret: process.env.SHOPIFY_API_SECRET, // Replace with your secret key
@@ -30,20 +41,6 @@ app.get("/api", (req, res) => {
   res.send("Server is running ...!");
 });
 
-// ==== CORS Policy ==== //// ==== CORS ===== //
-var whitelist = ["*"];
-var corsOptions = {
-  origin: function (origin, callback) {
-    if (whitelist.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  allowedHeaders: ["content-type"],
-  credentials: true,
-};
-
 // ==== Defining Routes ==== //
 import shopifyRouter from "./src/app/auth/auth.routes.js";
 import quizRouter from "./src/app/quiz/quiz.routes.js";
@@ -54,9 +51,9 @@ app.use("/api/auth", authRouter);
 app.use("/shopify", shopifyRouter);
 app.use("/quiz", quizRouter);
 
-// ==== Error Handeling ==== //
+// ==== Error Handling ==== //
 
-// ==== Start Server on PORT 5000 ==== //
+// ==== Start Server on PORT ==== //
 app.listen(PORT, () => console.log(`Server Started on PORT => ${PORT}`));
 
 export default app;
