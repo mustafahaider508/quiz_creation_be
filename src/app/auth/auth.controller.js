@@ -119,6 +119,8 @@ const logoutShopify = async (req, res) => {
   }
 };
 
+
+//signup
 export const Signup = async (req, res, next) => {
   try {
     const { firstName, surname, email, password } = req.body;
@@ -133,12 +135,26 @@ export const Signup = async (req, res, next) => {
       email,
       passwordHash,
     });
+
+    const payload = {
+      user: {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
+    };
+    const token = await getToken({ payload, expiresIn: "5 days" });
+
     // Delete password field from user object
     delete user.password;
+    const data = {
+      token: token,
+      user: user,
+    };
 
-    return sendResponse(req, res, 200, "User Signup Successfully", user);
+    return sendResponse(req, res, 200, "User Signup Successfully", data);
   } catch (error) {
-    return sendServerResponse(req, res, 500 ,error);
+    return sendServerResponse(req, res, 500, error);
   }
 };
 
@@ -146,15 +162,11 @@ export const Signup = async (req, res, next) => {
 export const SignIn = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
-    console.log("req",req.body)
-
     // Check if user exists
     const findUser = await service.findUser(email);
     if (!findUser) {
       return sendError(req, res, 400, "User Not Found");
     }
-
     // Match password
     const isMatch = await matchPassword(password, findUser.password);
     if (!isMatch) {
@@ -179,11 +191,9 @@ export const SignIn = async (req, res, next) => {
       user: findUser,
     };
 
-  
-
     return sendResponse(req, res, 200, "User Login Successfully", data);
   } catch (error) {
-    return sendServerResponse(req, res, 500 ,error);
+    return sendServerResponse(req, res, 500, error);
   }
 };
 

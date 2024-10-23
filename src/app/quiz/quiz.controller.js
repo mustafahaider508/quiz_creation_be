@@ -19,10 +19,10 @@ export const getCanvaTemplate = async (req, res) => {
 };
 export const generatingQuizByText = async (req, res, next) => {
   try {
-    const { userId, text, no_of_questions, difficulty_level ,email } = req.body;
+    const { userId, text, no_of_questions, difficulty_level ,email,subject } = req.body;
     const url = `http://100.27.81.124/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url, userId);
-    const saveQuiz = await prisma.quiz.create({
+    const saveQuiz = await prisma.quiz.create({  
       data: {
         userId,
         quizData: quiz?.data,
@@ -43,7 +43,7 @@ export const generatingQuizByText = async (req, res, next) => {
 
 export const generatingQuizByLink = async (req, res, next) => {
   try {
-    const { userId, quiz_creation_youtube, no_of_questions, difficulty_level,email } =
+    const { userId, quiz_creation_youtube, no_of_questions, difficulty_level,email,subject } =
       req.body;
     const url = `http://100.27.81.124/quiz_creation_youtube?youtube_url=${quiz_creation_youtube}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url, userId);
@@ -67,7 +67,7 @@ export const generatingQuizByLink = async (req, res, next) => {
 
 export const generatingQuizByFile = async (req, res, next) => {
   try {
-    const { userId, data,email } = req.body;
+    const { userId, data,email,subject } = req.body;
     const quiz = await prisma.quiz.create({
       data: {
         quizData: data,
