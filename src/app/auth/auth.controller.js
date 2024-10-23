@@ -119,6 +119,8 @@ const logoutShopify = async (req, res) => {
   }
 };
 
+
+//signup
 export const Signup = async (req, res, next) => {
   try {
     const { firstName, surname, email, password } = req.body;
