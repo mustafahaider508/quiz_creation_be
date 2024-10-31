@@ -143,10 +143,23 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
   }
 };
 
+const editQuiz = ({quizId,userId,quiz}) => {
+   return prisma.quiz.update({
+    where:{
+      id:quizId
+    },
+    data: {
+      userId,
+      quizData: quiz?.data,
+    },
+   })
+}
+
 const quizService = {
   generateQuiz,
   createCanvaDesign,
   generateQuizbyFile,
-  getQuizByUserId
+  getQuizByUserId,
+  editQuiz
 };
 export default quizService;
