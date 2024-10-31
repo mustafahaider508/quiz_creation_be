@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
-
+import fs from "fs";
 
 // Get Password Hash
 export const getPasswordHash = async (password) => {
@@ -84,6 +84,17 @@ export const sendEmail = (data) => {
       },
     });
 
+
+
+    const pdfs = data?.pdfFilePath?.map((ele, index) => {
+      let data = {
+        filename: `pre${index + 1}.pdf`,
+        content: ele,
+        contentType: "application/pdf",
+      };
+      return data;
+    });
+
     // Message object
     let mailOptions = {
       from: `${process.env.FROM}`,
@@ -91,13 +102,7 @@ export const sendEmail = (data) => {
       subject: data?.subject,
       text: "",
       html: data?.html,
-      attachments: [
-        {
-          filename: "quiz.pdf", 
-          content: data?.pdfFilePath,
-          contentType: "application/pdf", 
-        },
-      ],
+      attachments: pdfs,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -120,21 +125,20 @@ export const sendResponse = (req, res, status, message, data) => {
   });
 };
 
-export const sendError = (req,res,status,message) => {
+export const sendError = (req, res, status, message) => {
   return res.status(status).json({
     status,
     message,
-    data:0
-  })
+    data: 0,
+  });
+};
 
-}
-
-export const sendServerResponse = (req,res,status,error) => {
+export const sendServerResponse = (req, res, status, error) => {
   return res.status(status).json({
-    message:"server Error",
-    error:error.message
-  })
-}
+    message: "server Error",
+    error: error.message,
+  });
+};
 
 const authUtils = {
   getToken,
@@ -143,7 +147,6 @@ const authUtils = {
   sendEmail,
   verifyToken,
   generatePassword,
-
 };
 
 export default authUtils;
