@@ -8,46 +8,77 @@ import { sendEmail } from "../../../utils/utils.js";
 import path from "path";
 import fs from "fs";
 import process from "process";
+import prisma from "../../../config/db.js";
 
-export const generatePdfWithInjectedData = async (quizData,email) => {
+export const generatePdfWithInjectedData = async (quizData, email) => {
   const auth = await authorize();
   const injectResponse = await injectDataIntoSlide(auth, quizData);
+  console.log("injectResponse++", injectResponse);
+
   if (injectResponse) {
-    const pdfResponse = await exportSlidesToPDF(auth);
-    console.log("pdfResponse", pdfResponse);
-    if (pdfResponse?.message) {
-      setTimeout(() => {
-        const pdfFilePath = path.join(process.cwd(), "presentation.pdf");
-        fs.readFile(pdfFilePath, async (err, pdfData) => {
-          if (err) {
-            console.log("Error reading PDF file:", err);
-            return;
-          }
-          console.log("reading Pdf File....", pdfData);
-          const emailData = {
-            to: email,
-            subject: "Quiz",
-            html: "",
-            pdfFilePath: pdfData,
-          };
-          await sendEmail(emailData);
+    // Create an array to store the buffers for each PDF
+    const buffer = await Promise.all(
+      injectResponse.map((ele) => {
+        return new Promise((resolve, reject) => {
+          const pdfFilePath = path.join(process.cwd(), `/uploads/${ele}.pdf`);
+
+          // Check if the file exists before reading
+          fs.access(pdfFilePath, fs.constants.F_OK, (err) => {
+            if (err) {
+              console.log(`File not found: ${pdfFilePath}`);
+              return reject(new Error(`File not found: ${pdfFilePath}`));
+            }
+
+            // Read the file if it exists
+            fs.readFile(pdfFilePath, (err, pdfData) => {
+              if (err) {
+                console.log("Error reading PDF file:", err);
+                return reject(err);
+              }
+
+              // Log only if data is present
+              if (pdfData && pdfData.length > 0) {
+                console.log("Reading PDF File...", pdfData);
+                resolve(pdfData); // Resolve with the PDF data buffer
+              } else {
+                console.log(`Empty PDF buffer for file: ${pdfFilePath}`);
+                reject(new Error(`Empty buffer for file: ${pdfFilePath}`));
+              }
+            });
+          });
         });
-      }, 1000);
+      })
+    ).catch((err) => {
+      console.error("Error collecting PDF buffers:", err);
+      return [];
+    });
+
+   
+
+    // Proceed only if all buffers are correctly read
+    if (buffer.length > 0) {
+      const emailData = {
+        to: email,
+        subject: "Quiz",
+        html: "",
+        pdfFilePath: buffer,
+      };
+      console.log("buffer++++>>", buffer?.length);
+      await sendEmail(emailData);
+    } else {
+      console.error("No valid PDF buffers found; email not sent.");
     }
   }
 };
 
-
 export const makeQuizDataFormate = (quizData) => {
-  const data = quizData["QUIZ QUESTIONS & ANSWERS"]?.map(
-    (ele, index) => {
-      const question = ele[`Question ${index + 1}`];
-      const options = ele["Options"] ? Object.values(ele["Options"]) : [];
-      return [(index + 1).toString(), question, ...options];
-    }
-  );
-  return data
-}
+  const data = quizData["QUIZ QUESTIONS & ANSWERS"]?.map((ele, index) => {
+    const question = ele[`Question ${index + 1}`];
+    const options = ele["Options"] ? Object.values(ele["Options"]) : [];
+    return [(index + 1).toString(), question, ...options];
+  });
+  return data;
+};
 
 const generateQuiz = async (url) => {
   try {
@@ -62,6 +93,14 @@ const generateQuiz = async (url) => {
     throw error;
   }
 };
+
+const getQuizByUserId = (userId) => {
+  return prisma.quiz.findFirst({
+    where:{
+      userId
+    }
+  })
+}
 
 const generateQuizbyFile = async (url, formData) => {
   try {
@@ -104,9 +143,23 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
   }
 };
 
+const editQuiz = ({quizId,userId,quiz}) => {
+   return prisma.quiz.update({
+    where:{
+      id:quizId
+    },
+    data: {
+      userId,
+      quizData: quiz?.data,
+    },
+   })
+}
+
 const quizService = {
   generateQuiz,
   createCanvaDesign,
   generateQuizbyFile,
+  getQuizByUserId,
+  editQuiz
 };
 export default quizService;

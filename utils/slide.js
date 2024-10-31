@@ -3,7 +3,7 @@ import path from "path";
 import process from "process";
 import { authenticate } from "@google-cloud/local-auth";
 import { google } from "googleapis";
-import { createWriteStream } from 'fs'; // For writeStream
+import { createWriteStream } from "fs"; // For writeStream
 
 // If modifying these scopes, delete token.json.
 const SCOPES = [
@@ -12,7 +12,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/spreadsheets.readonly",
-  "https://www.googleapis.com/auth/drive"
+  "https://www.googleapis.com/auth/drive",
 ];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
@@ -75,18 +75,146 @@ export const listSlides = async (auth) => {
   return slides;
 };
 
+// export async function injectDataIntoSlide(auth, quizData) {
+//   let presentationId = "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM";
+//   let sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
+//   let sheetName = "Ark1";
+//   const sheetsService = google.sheets({ version: "v4", auth });
+//   const slidesService = google.slides({ version: "v1", auth });
+//   const sheetRange = `${sheetName}!A1:Z1000`;
+
+//   // Fetch data from Google Sheets
+//   const sheetResponse = await sheetsService.spreadsheets.values.get({
+//     spreadsheetId: sheetId,
+//     range: sheetRange,
+//   });
+
+//   const data = sheetResponse.data.values;
+
+//   if (!data || data.length === 0) {
+//     console.log("No data found in the sheet.");
+//     return;
+//   }
+
+//   // Fetch slides from the presentation
+//   const slides = await listSlides(auth, presentationId);
+//   if (!slides || slides.length === 0) {
+//     console.log("No slides found in the presentation.");
+//     return;
+//   }
+
+//   const requests = [];
+
+//   slides.forEach((slide, slideIndex) => {
+//     console.log(`Processing slide #${slideIndex + 1}`);
+
+//     if (slideIndex >= quizData.length) {
+//       console.log(`No corresponding row data for slide #${slideIndex + 1}`);
+//       return;
+//     }
+
+//     const rowData = quizData[slideIndex];
+
+//     // Filter and map text boxes
+//     const textBoxIds = slide.pageElements
+//       .filter((el) => el.shape && el.shape.shapeType) // Ensure it's a text box with text
+//       .map((el) => el.objectId);
+
+//     console.log("TextBox IDs:", textBoxIds);
+
+//     if (textBoxIds.length === 0) {
+//       console.log(`No text boxes found on slide #${slideIndex + 1}`);
+//       return;
+//     }
+
+//     // First clear existing text in all text boxes
+//     textBoxIds.forEach((id) => {
+//       requests.push({
+//         deleteText: {
+//           objectId: id,
+//           textRange: {
+//             type: "ALL",
+//           },
+//         },
+//       });
+//     });
+
+//     // Then insert new text into text boxes
+//     rowData?.forEach((text, index) => {
+//       if (index < textBoxIds.length) {
+//         console.log(
+//           `Inserting text "${text}" into TextBox ID: ${textBoxIds[index]}`
+//         );
+//         requests.push({
+//           insertText: {
+//             objectId: textBoxIds[index],
+//             text,
+//           },
+//         });
+//       }
+//     });
+
+//     // Optional: Style text after inserting
+//     requests.push(
+//       ...textBoxIds.map((id) => ({
+//         updateTextStyle: {
+//           objectId: id,
+//           style: {
+//             fontSize: {
+//               magnitude: 48,
+//               unit: "PT",
+//             },
+//             foregroundColor: {
+//               opaqueColor: {
+//                 rgbColor: {
+//                   red: 0,
+//                   green: 0,
+//                   blue: 0,
+//                 },
+//               },
+//             },
+//             bold: true,
+//             fontFamily: "Trade Gothic",
+//           },
+//           fields: "fontSize,foregroundColor,bold,fontFamily",
+//         },
+//       }))
+//     );
+//   });
+
+//   if (requests.length === 0) {
+//     console.log("No valid requests generated.");
+//     return;
+//   }
+
+//   try {
+//     await slidesService.presentations.batchUpdate({
+//       presentationId,
+//       requestBody: {
+//         requests,
+//       },
+//     });
+
+//     console.log("Data injected successfully");
+//     return {
+//       message: "Data injected successfully",
+//     };
+//   } catch (err) {
+//     console.error("Error injecting data:", err);
+//   }
+// }
+
 export async function injectDataIntoSlide(auth, quizData) {
-  let presentationId = "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM";
-  let sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
-  let sheetName = "Ark1";
+  const presentationId = "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM";
+  const sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
+  const sheetName = "Ark1";
   const sheetsService = google.sheets({ version: "v4", auth });
   const slidesService = google.slides({ version: "v1", auth });
-  const sheetRange = `${sheetName}!A1:Z1000`;
 
   // Fetch data from Google Sheets
   const sheetResponse = await sheetsService.spreadsheets.values.get({
     spreadsheetId: sheetId,
-    range: sheetRange,
+    range: `${sheetName}!A1:Z1000`,
   });
 
   const data = sheetResponse.data.values;
@@ -103,36 +231,26 @@ export async function injectDataIntoSlide(auth, quizData) {
     return;
   }
 
-  const requests = [];
+  const slide = slides[0]; // Use the first slide for all questions
 
-  // const quizData = [
-  //   ["1", "New RowData:", "New But:", "New but2:", "New but3:"],
-  //   ["2", "What is the best music genre in the world?", "Azaz", "Ali", "Khan"],
-  // ];
+  // Filter and map text boxes
+  const textBoxIds = slide.pageElements
+    .filter((el) => el.shape && el.shape.shapeType === "TEXT_BOX") // Ensure it's a text box
+    .map((el) => el.objectId);
 
-  slides.forEach((slide, slideIndex) => {
-    console.log(`Processing slide #${slideIndex + 1}`);
+  if (!textBoxIds || textBoxIds.length === 0) {
+    console.log("No text boxes found on the slide.");
+    return;
+  }
 
-    if (slideIndex >= quizData.length) {
-      console.log(`No corresponding row data for slide #${slideIndex + 1}`);
-      return;
-    }
+  let slidesArray = [];
 
-    const rowData = quizData[slideIndex];
+  // Process each question in `quizData`
+  for (let i = 0; i < quizData.length; i++) {
+    const rowData = quizData[i];
+    const requests = [];
 
-    // Filter and map text boxes
-    const textBoxIds = slide.pageElements
-      .filter((el) => el.shape && el.shape.shapeType) // Ensure it's a text box with text
-      .map((el) => el.objectId);
-
-    console.log("TextBox IDs:", textBoxIds);
-
-    if (textBoxIds.length === 0) {
-      console.log(`No text boxes found on slide #${slideIndex + 1}`);
-      return;
-    }
-
-    // First clear existing text in all text boxes
+    // Clear existing text in all text boxes
     textBoxIds.forEach((id) => {
       requests.push({
         deleteText: {
@@ -144,8 +262,8 @@ export async function injectDataIntoSlide(auth, quizData) {
       });
     });
 
-    // Then insert new text into text boxes
-    rowData?.forEach((text, index) => {
+    // Insert new text into text boxes
+    rowData.forEach((text, index) => {
       if (index < textBoxIds.length) {
         console.log(
           `Inserting text "${text}" into TextBox ID: ${textBoxIds[index]}`
@@ -159,7 +277,7 @@ export async function injectDataIntoSlide(auth, quizData) {
       }
     });
 
-    // Optional: Style text after inserting
+    // Apply text styling after inserting
     requests.push(
       ...textBoxIds.map((id) => ({
         updateTextStyle: {
@@ -185,70 +303,72 @@ export async function injectDataIntoSlide(auth, quizData) {
         },
       }))
     );
-  });
 
-  if (requests.length === 0) {
-    console.log("No valid requests generated.");
-    return;
-  }
-
-  try {
+    // Execute the request for Google Slides API
     await slidesService.presentations.batchUpdate({
       presentationId,
-      requestBody: {
-        requests,
-      },
+      resource: { requests },
     });
-    console.log("Data injected successfully");
-    return {
-      message: "Data injected successfully",
-    };
-  } catch (err) {
-    console.error("Error injecting data:", err);
+
+    let index = i;
+
+    console.log(`Question #${i + 1} inserted.`);
+    const pdfResponse = await exportSlidesToPDF(auth, index);
+
+    if (pdfResponse) {
+      slidesArray.push(`presentation_${index + 1}`);
+      console.log("pdfResponse", pdfResponse);
+    }
   }
+
+  console.log("All questions processed.", slidesArray);
+  return slidesArray;
 }
 
-export async function exportSlidesToPDF(auth) {
-
+export async function exportSlidesToPDF(auth, index) {
   try {
     const presentationId = "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM";
-  const drive = google.drive({ version: "v3", auth });
+    const drive = google.drive({ version: "v3", auth });
 
-  // Export the presentation as a PDF
-  const pdf = await drive.files.export(
-    {
-      fileId: presentationId,
-      mimeType: "application/pdf",
-    },
-    { responseType: "stream" }
-  );
+    // Export the presentation as a PDF
+    const pdf = await drive.files.export(
+      {
+        fileId: presentationId,
+        mimeType: "application/pdf",
+      },
+      { responseType: "stream" }
+    );
 
-  // Create the file path to save the PDF on your Node.js server
-  const filePath = path.join(path.resolve(), `presentation.pdf`);
-  const dest = createWriteStream(filePath);
+    // Define the file path to save the PDF on the server
+    const filePath = path.join(
+      path.resolve(),
+      `/uploads/presentation_${index + 1}.pdf`
+    );
+    const dest = createWriteStream(filePath);
 
-  // Save the PDF stream to the file
-  pdf.data.pipe(dest);
-  return {
-    message: "Presentation exported as PDF and saved to the server",
-  };
-    
+    // Return a promise to wait until the file is completely written
+    return new Promise((resolve, reject) => {
+      pdf.data
+        .on("error", (error) => {
+          console.error("Error during PDF download stream:", error);
+          reject({ message: "Error exporting PDF", error });
+        })
+        .pipe(dest)
+        .on("finish", () => {
+          console.log("PDF successfully saved to:", filePath);
+          resolve({
+            message: "Presentation exported as PDF and saved to the server",
+          });
+        })
+        .on("error", (error) => {
+          console.error("Error writing PDF to file:", error);
+          reject({ message: "Error saving PDF to server", error });
+        });
+    });
   } catch (error) {
-    console.error('Error exporting PDF:', error);
-    return error
+    console.error("Error exporting PDF:", error);
+    return { message: "Error exporting PDF", error };
   }
-  
-  //   return new Promise((resolve, reject) => {
-  //     dest.on('finish', () => {
-  //       console.log('Presentation exported as PDF and saved to the server:', filePath);
-  //       resolve();
-  //     });
-
-  //     dest.on('error', (err) => {
-  //       console.error('Error exporting PDF:', err);
-  //       reject(err);
-  //     });
-  //   });
 }
 
 // Usage example:
