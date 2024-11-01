@@ -18,13 +18,7 @@ app.use(
 );
 
 // ==== CORS Policy ==== //
-var corsOptions = {
-  origin: true, // Allow requests from any domain
-  allowedHeaders: ["content-type"],
-  credentials: true,
-};
-
-app.use(cors(corsOptions));
+app.use(cors({ origin: '*' }));
 
 // ==== Session Configuration ==== //
 app.use(
