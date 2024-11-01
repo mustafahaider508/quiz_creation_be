@@ -19,7 +19,7 @@ export const getCanvaTemplate = async (req, res) => {
   }
 };
 export const generatingQuizByText = async (req, res, next) => {
-  try {
+  // try {
     const { userId, text, no_of_questions, difficulty_level, email } = req.body;
     const url = `https://quiz.codistan.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url, userId);
@@ -37,9 +37,9 @@ export const generatingQuizByText = async (req, res, next) => {
         data: saveQuiz,
       });
     }
-  } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
-  }
+  // } catch (error) {
+  //   res.status(500).json({ error: "Internal Server Error" });
+  // }
 };
 
 // Update The Quiz by Text
