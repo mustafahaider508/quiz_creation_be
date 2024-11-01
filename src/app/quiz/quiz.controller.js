@@ -21,8 +21,8 @@ export const getCanvaTemplate = async (req, res) => {
 export const generatingQuizByText = async (req, res, next) => {
   try {
     const { userId, text, no_of_questions, difficulty_level, email } = req.body;
-    const url = `https://quiz.codistan.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
-    const quiz = await generateQuiz(url, userId);
+    const url = `https://quiz.codistandemos.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const quiz = await generateQuiz(url);
     const saveQuiz = await prisma.quiz.create({
       data: {
         userId,
@@ -38,7 +38,7 @@ export const generatingQuizByText = async (req, res, next) => {
       });
     }
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error :error, message: "Internal Server Error" });
   }
 };
 
@@ -48,7 +48,7 @@ export const updatingQuizByText = async (req, res, next) => {
     const { quizId, userId, text, no_of_questions, difficulty_level, email } =
       req.body;
 
-    const url = `https://quiz.codistan.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const url = `https://quiz.codistandemos.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url, userId);
     const quizData = await makeQuizDataFormate(quiz?.data);
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
@@ -74,7 +74,7 @@ export const generatingQuizByLink = async (req, res, next) => {
       email,
       subject,
     } = req.body;
-    const url = `https://quiz.codistan.org/quiz_creation_youtube?youtube_url=${quiz_creation_youtube}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const url = `https://quiz.codistandemos.org/quiz_creation_youtube?youtube_url=${quiz_creation_youtube}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url, userId);
     console.log("quiz?.data+++", quiz?.data);
     const saveQuiz = await prisma.quiz.create({
