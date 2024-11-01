@@ -43,7 +43,7 @@ import authRouter from "./src/app/auth/auth.routes.js";
 // ==== Private Routes ==== //
 app.use("/api/auth", authRouter);
 app.use("/shopify", shopifyRouter);
-app.use("/quiz", quizRouter);
+app.use("/api/quiz", quizRouter);
 
 // ==== Error Handling ==== //
 
