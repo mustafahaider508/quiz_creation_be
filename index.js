@@ -2,64 +2,66 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import session from "express-session";
-
 dotenv.config({ silent: process.env.NODE_ENV === "production" });
 
 const app = express();
 const PORT = process.env.PORT;
 
-// === Middleware Setup === //
-
-// Parse JSON bodies
+// for parsing application/json
 app.use(express.json());
 
-// Parse URL-encoded bodies
-app.use(express.urlencoded({ extended: true }));
+// for parsing application/x-www-form-urlencoded
+app.use(
+  express.urlencoded({
+    extended: true,
+  })
+);
 
-// === CORS Configuration === //
+// ==== CORS Policy ==== //
 
-// Configure CORS middleware to allow all origins without credentials
-const corsOptions = {
-  origin: "*", // Allows requests from any origin
-};
+// var whitelist = ["*"];
+// var corsOptions = {
+//   origin: function (origin, callback) {
+//     if (whitelist.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+//   allowedHeaders: ["content-type"],
+//   credentials: true,
+// };
 
-app.use(cors(corsOptions));
+app.use(cors());
 
-// === Session Configuration === //
-
-// Since credentials are not allowed, session cookies will not be sent
-// Adjust your session handling accordingly if necessary
+// ==== Session Configuration ==== //
 app.use(
   session({
     secret: process.env.SHOPIFY_API_SECRET, // Replace with your secret key
     resave: false,
     saveUninitialized: true,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-    },
+    cookie: { secure: process.env.NODE_ENV === "production" },
   })
 );
 
-// === Route Definitions === //
-
+// ==== Server status API ==== //
 app.get("/api", (req, res) => {
   res.send("Server is running ...!");
 });
 
-// Import routes
+// ==== Defining Routes ==== //
 import shopifyRouter from "./src/app/auth/auth.routes.js";
 import quizRouter from "./src/app/quiz/quiz.routes.js";
 import authRouter from "./src/app/auth/auth.routes.js";
 
-// Use routes
+// ==== Private Routes ==== //
 app.use("/api/auth", authRouter);
 app.use("/shopify", shopifyRouter);
 app.use("/api/quiz", quizRouter);
 
-// === Start Server === //
+// ==== Error Handling ==== //
 
+// ==== Start Server on PORT ==== //
 app.listen(PORT, () => console.log(`Server Started on PORT => ${PORT}`));
 
 export default app;
