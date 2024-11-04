@@ -17,22 +17,28 @@ app.use(
   })
 );
 
+app.use(cors(corsOptions))
+
 // ==== CORS Policy ==== //
 
-// var whitelist = ["*"];
-// var corsOptions = {
-//   origin: function (origin, callback) {
-//     if (whitelist.includes(origin)) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error("Not allowed by CORS"));
-//     }
-//   },
-//   allowedHeaders: ["content-type"],
-//   credentials: true,
-// };
-
-app.use(cors());
+var whitelist = [
+  "*",
+  "http://127.0.0.1:5500",
+  "https://skilltrack.fun",
+  "https://quiz.codistandemos.org",
+];
+var corsOptions = {
+  origin: function (origin, callback) {
+    console.log("origin+++",origin)
+    if (whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  allowedHeaders: ["content-type"],
+  credentials: true,
+};
 
 // ==== Session Configuration ==== //
 app.use(
@@ -65,3 +71,5 @@ app.use("/api/quiz", quizRouter);
 app.listen(PORT, () => console.log(`Server Started on PORT => ${PORT}`));
 
 export default app;
+
+
