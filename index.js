@@ -27,7 +27,7 @@ app.use(
 //   allowedHeaders: 'Content-Type,Authorization'
 // }));
 
-const whitelist = ['https://skilltrack.fun']; // List of allowed domains
+const whitelist = ['https://skilltrack.fun/']; // List of allowed domains
 const corsOptions = {
     origin: (origin, callback) => {
       console.log('origin',origin)
