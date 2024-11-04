@@ -17,7 +17,7 @@ app.use(
   })
 );
 
-app.use(cors(corsOptions))
+
 
 // ==== CORS Policy ==== //
 
@@ -29,6 +29,7 @@ var whitelist = [
 ];
 var corsOptions = {
   origin: function (origin, callback) {
+    console.log("origin+++",origin)
     if (whitelist.includes(origin)) {
       callback(null, true);
     } else {
@@ -38,6 +39,8 @@ var corsOptions = {
   allowedHeaders: ["content-type"],
   credentials: true,
 };
+
+app.use(cors(corsOptions))
 
 // ==== Session Configuration ==== //
 app.use(
@@ -70,3 +73,5 @@ app.use("/api/quiz", quizRouter);
 app.listen(PORT, () => console.log(`Server Started on PORT => ${PORT}`));
 
 export default app;
+
+
