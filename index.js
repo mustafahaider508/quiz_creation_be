@@ -18,7 +18,16 @@ app.use(
 );
 
 // ==== CORS Policy ==== //
-app.use(cors({ origin: '*' }));
+const allowedOrigins = ['http://127.0.0.1:5500', 'https://skilltrack.fun'];
+app.use(cors({
+  origin: function(origin, callback){
+    if(allowedOrigins.indexOf(origin) !== -1 || !origin){
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 
 // ==== Session Configuration ==== //
 app.use(
