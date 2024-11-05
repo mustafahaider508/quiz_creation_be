@@ -18,6 +18,7 @@ app.use(
   })
 );
 
+//updated
 // ==== CORS Policy ==== //
 
 // Define allowed origin and CORS options
