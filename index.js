@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import session from "express-session";
+
 dotenv.config({ silent: process.env.NODE_ENV === "production" });
 
 const app = express();
@@ -17,39 +18,18 @@ app.use(
   })
 );
 
-
-
 // ==== CORS Policy ==== //
 
-// app.use(cors({
-//   origin: '*',
-//   methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH'],
-//   allowedHeaders: 'Content-Type,Authorization'
-// }));
-
-// const whitelist = ['https://skilltrack.fun']; // List of allowed domains
-// const corsOptions = {
-//     origin: (origin, callback) => {
-//       console.log('origin',origin)
-//         if (whitelist.indexOf(origin) !== -1 || !origin) {
-//             callback(null, true);
-//         } else {
-//             callback(new Error('Not allowed by CORS'));
-//         }
-//     },
-//     credentials: true, // Reflect the requested origin if it's on the whitelist or no origin is provided
-// };
-
+// Define allowed origin and CORS options
 const corsOptions = {
-  origin: 'https://skilltrack.fun',
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  origin: 'https://skilltrack.fun', // Only allow requests from this origin
+  methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH'],
   allowedHeaders: 'Content-Type,Authorization',
-  credentials: true,
+  credentials: true, // Allow credentials
 };
 
+// Use CORS with defined options
 app.use(cors(corsOptions));
-
-
 
 // ==== Session Configuration ==== //
 app.use(
@@ -77,10 +57,12 @@ app.use("/shopify", shopifyRouter);
 app.use("/api/quiz", quizRouter);
 
 // ==== Error Handling ==== //
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something went wrong!");
+});
 
 // ==== Start Server on PORT ==== //
 app.listen(PORT, () => console.log(`Server Started on PORT => ${PORT}`));
 
 export default app;
-
-
