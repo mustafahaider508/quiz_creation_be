@@ -38,7 +38,7 @@ export const generatingQuizByText = async (req, res, next) => {
       });
     }
   } catch (error) {
-    res.status(500).json({ error :error, message: "Internal Server Error" });
+    res.status(500).json({ error: error, message: "Internal Server Error" });
   }
 };
 
@@ -68,15 +68,25 @@ export const generatingQuizByLink = async (req, res, next) => {
   try {
     const {
       userId,
-      quiz_creation_youtube,
       no_of_questions,
       difficulty_level,
       email,
       subject,
+      youtubeUrl,
+      formate,
     } = req.body;
-    const url = `https://quiz.codistandemos.org/quiz_creation_youtube?youtube_url=${quiz_creation_youtube}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const quizfile = await quizService.convertVideoToMp3({
+      youtubeUrl,
+      formate,
+    });
+    console.log("quizfile++++", quizfile?.downloadUrl);
+    if (quizfile) {
+      const downloadLink = quizfile?.downloadUrl;
+      quizService.saveFile(downloadLink);
+    }
+
+    const url = `https://quiz.codistandemos.org/quiz_creation_youtube?youtube_url=${quizfile?.downloadUrl}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url, userId);
-    console.log("quiz?.data+++", quiz?.data);
     const saveQuiz = await prisma.quiz.create({
       data: {
         userId,
@@ -84,10 +94,13 @@ export const generatingQuizByLink = async (req, res, next) => {
       },
     });
 
-    return res.status(200).json({
-      message: "Quiz generated Successfully",
-      data: saveQuiz,
-    });
+    // if (saveQuiz) {
+    //   await generatePdfWithInjectedData(quizData, email);
+    //   return res.status(200).json({
+    //     message: "Quiz generated Successfully",
+    //     data: saveQuiz,
+    //   });
+    // }
   } catch (error) {
     console.error("Error in generating quiz:", error);
     res.status(500).json({ error: "Internal Server Error" });

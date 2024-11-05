@@ -53,8 +53,6 @@ export const generatePdfWithInjectedData = async (quizData, email) => {
       return [];
     });
 
-   
-
     // Proceed only if all buffers are correctly read
     if (buffer.length > 0) {
       const emailData = {
@@ -96,11 +94,11 @@ const generateQuiz = async (url) => {
 
 const getQuizByUserId = (userId) => {
   return prisma.quiz.findFirst({
-    where:{
-      userId
-    }
-  })
-}
+    where: {
+      userId,
+    },
+  });
+};
 
 const generateQuizbyFile = async (url, formData) => {
   try {
@@ -143,23 +141,80 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
   }
 };
 
-const editQuiz = ({quizId,userId,quiz}) => {
-   return prisma.quiz.update({
-    where:{
-      id:quizId
+const editQuiz = ({ quizId, userId, quiz }) => {
+  return prisma.quiz.update({
+    where: {
+      id: quizId,
     },
     data: {
       userId,
       quizData: quiz?.data,
     },
-   })
-}
+  });
+};
+
+const saveFile = async (downloadLink) => {
+  // try {
+  // Extract the MP3 link from the response
+  console.log("downloadLink", downloadLink);
+  const mp3Link = downloadLink;
+  if (!mp3Link) {
+    throw new Error("No valid MP3 link received from the API.");
+  }
+
+  // Download the MP3 file using the link
+  const mp3Response = await axios.get(mp3Link, { responseType: "stream" });
+
+  // Define the path to save the MP3 file
+  const filePath = path.resolve("uploads", `${Date.now()}.mp3`);
+
+  // Create a write stream to save the file
+  const writer = fs.createWriteStream(filePath);
+
+  // Pipe the response data into the write stream
+  mp3Response.data.pipe(writer);
+
+  // Return a promise to handle the download completion
+  return new Promise((resolve, reject) => {
+    writer.on("finish", () => {
+      console.log("File downloaded successfully:", filePath);
+      resolve(filePath); // Resolve with the file path
+    });
+    writer.on("error", reject);
+  });
+  // } catch (error) {
+  //   console.log("Error occurs");
+  // }
+};
+
+const convertVideoToMp3 = async ({ youtubeUrl, formate }) => {
+  try {
+    const fullUrl = `https://youtube-to-mp315.p.rapidapi.com/download?url=${youtubeUrl}&format=${formate}`;
+
+    const response = await axios.post(
+      fullUrl,
+      {},
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "x-RapidAPI-Key": process.env.RAPIDAPI_KEY,
+          "x-RapidAPI-Host": "youtube-to-mp315.p.rapidapi.com",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.log("Error occurs", error);
+  }
+};
 
 const quizService = {
   generateQuiz,
   createCanvaDesign,
   generateQuizbyFile,
   getQuizByUserId,
-  editQuiz
+  editQuiz,
+  convertVideoToMp3,
+  saveFile,
 };
 export default quizService;
