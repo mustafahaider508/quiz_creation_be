@@ -1,7 +1,8 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
-import fs from "fs";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
+import fs from 'fs';
+import axios from 'axios';
 
 // Get Password Hash
 export const getPasswordHash = async (password) => {
@@ -65,17 +66,17 @@ const generatePassword = (length) => {
   return Array.from(
     { length },
     () =>
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+"[
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+'[
         Math.floor(Math.random() * 72)
       ]
-  ).join("");
+  ).join('');
 };
 
 export const sendEmail = (data) => {
   return new Promise((resolve, reject) => {
     // Create a SMTP transporter object
     const transporter = nodemailer.createTransport({
-      service: "Gmail",
+      service: 'Gmail',
       host: process.env.GMAILHOST,
       port: process.env.GMAILPORT,
       auth: {
@@ -84,15 +85,12 @@ export const sendEmail = (data) => {
       },
     });
 
-
-
-    const pdfs = data?.pdfFilePath?.map((ele, index) => {
-      let data = {
+    const pdfs = data?.pdfFilePath?.map((filePath, index) => {
+      return {
         filename: `pre${index + 1}.pdf`,
-        content: ele,
-        contentType: "application/pdf",
+        path: filePath, // Use the file path directly to read it as an attachment
+        contentType: 'application/pdf',
       };
-      return data;
     });
 
     // Message object
@@ -100,7 +98,7 @@ export const sendEmail = (data) => {
       from: `${process.env.FROM}`,
       to: data?.to,
       subject: data?.subject,
-      text: "",
+      text: '',
       html: data?.html,
       attachments: pdfs,
     };
@@ -110,7 +108,7 @@ export const sendEmail = (data) => {
         console.log(error);
         reject(error);
       } else {
-        console.log("Message sent: %s", info.messageId);
+        console.log('Message sent: %s', info.messageId);
         resolve();
       }
     });
@@ -135,9 +133,37 @@ export const sendError = (req, res, status, message) => {
 
 export const sendServerResponse = (req, res, status, error) => {
   return res.status(status).json({
-    message: "server Error",
+    message: 'server Error',
     error: error.message,
   });
+};
+
+export const handleAxiosError = (error) => {
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      console.error(
+        `Error: HTTP ${error.response.status} - ${error.response.data}`
+      );
+      throw new Error(
+        `Quiz generation failed with status ${error.response.status}: ${error.response.data}`
+      );
+    } else if (error.request) {
+      console.error('No response received from the server');
+      throw new Error(
+        'No response received from the server. Please try again.'
+      );
+    } else if (error.code === 'ECONNABORTED') {
+      console.error('Request timed out');
+      throw new Error('The request timed out. Please try again later.');
+    }
+    console.error('Axios error:', error.message);
+    throw new Error(
+      'An error occurred while generating the quiz. Please try again.'
+    );
+  } else {
+    console.error('Unexpected error:', error.message);
+    throw new Error('An unexpected error occurred. Please try again.');
+  }
 };
 
 const authUtils = {
