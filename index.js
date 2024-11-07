@@ -1,9 +1,9 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import session from "express-session";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import session from 'express-session';
 
-dotenv.config({ silent: process.env.NODE_ENV === "production" });
+dotenv.config({ silent: process.env.NODE_ENV === 'production' });
 
 const app = express();
 const PORT = process.env.PORT;
@@ -17,7 +17,6 @@ app.use(
     extended: true,
   })
 );
-
 
 // ==== CORS Policy ==== //
 
@@ -38,29 +37,29 @@ app.use(
     secret: process.env.SHOPIFY_API_SECRET, // Replace with your secret key
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === "production" },
+    cookie: { secure: process.env.NODE_ENV === 'production' },
   })
 );
 
 // ==== Server status API ==== //
-app.get("/api", (req, res) => {
-  res.send("Server is running ...!");
+app.get('/api', (req, res) => {
+  res.send('Server is running ...!');
 });
 
 // ==== Defining Routes ==== //
-import shopifyRouter from "./src/app/auth/auth.routes.js";
-import quizRouter from "./src/app/quiz/quiz.routes.js";
-import authRouter from "./src/app/auth/auth.routes.js";
+import shopifyRouter from './src/app/auth/auth.routes.js';
+import quizRouter from './src/app/quiz/quiz.routes.js';
+import authRouter from './src/app/auth/auth.routes.js';
 
 // ==== Private Routes ==== //
-app.use("/api/auth", authRouter);
-app.use("/shopify", shopifyRouter);
-app.use("/api/quiz", quizRouter);
+app.use('/api/auth', authRouter);
+app.use('/shopify', shopifyRouter);
+app.use('/api/quiz', quizRouter);
 
 // ==== Error Handling ==== //
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send("Something went wrong!");
+  res.status(500).send('Something went wrong!');
 });
 
 // ==== Start Server on PORT ==== //
