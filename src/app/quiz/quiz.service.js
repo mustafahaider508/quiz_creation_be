@@ -4,7 +4,11 @@ import {
   injectDataIntoSlide,
   exportSlidesToPDF,
 } from '../../../utils/slide.js';
-import { handleAxiosError, sendEmail } from '../../../utils/utils.js';
+import {
+  handleAxiosError,
+  sendEmail,
+  uploadPDFeToS3,
+} from '../../../utils/utils.js';
 import path from 'path';
 import fs from 'fs';
 import process from 'process';
@@ -60,6 +64,15 @@ export const generatePdfWithInjectedData = async (quizData, email) => {
       };
       console.log('Merged PDF path:', mergedPdfPath);
       await sendEmail(emailData);
+
+      const pdfFile = {
+        originalname: 'merged_quiz.pdf',
+        buffer: mergedPdfBytes,
+        mimetype: 'application/pdf',
+      };
+      const pdfURL = await uploadPDFeToS3(pdfFile);
+      console.log('File Uploded succesfully', pdfURL);
+      return pdfURL;
     } catch (error) {
       console.error('Error merging PDFs or sending email:', error);
     }

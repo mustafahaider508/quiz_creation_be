@@ -11,6 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.687.0",
     "@google-cloud/local-auth": "^2.1.0",
     "@prisma/client": "^5.18.0",
     "@shopify/shopify-api": "^11.1.0",
@@ -30,7 +31,8 @@
     "openai": "^4.52.5",
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.15.1",
-    "querystring": "^0.2.1"
+    "querystring": "^0.2.1",
+    "uuid": "^11.0.2"
   },
   "devDependencies": {
     "prisma": "^5.18.0"

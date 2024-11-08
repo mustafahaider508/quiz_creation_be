@@ -1,8 +1,12 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
-import fs from 'fs';
+// import fs from 'fs';
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
+
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import s3Client from '../config/s3.js';
 
 // Get Password Hash
 export const getPasswordHash = async (password) => {
@@ -163,6 +167,30 @@ export const handleAxiosError = (error) => {
   } else {
     console.error('Unexpected error:', error.message);
     throw new Error('An unexpected error occurred. Please try again.');
+  }
+};
+
+export const uploadPDFeToS3 = async (file) => {
+  try {
+    const fileExtension = file.originalname.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExtension}`;
+    const folderName = 'files';
+
+    const params = {
+      Bucket: process.env.S3_BUCKET,
+      Key: `${folderName}/${fileName}`,
+      Body: file.buffer,
+      ACL: 'public-read',
+      ContentType: file.mimetype,
+    };
+
+    const command = new PutObjectCommand(params);
+    const response = await s3Client.send(command);
+
+    return `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${folderName}/${fileName}`;
+  } catch (error) {
+    console.error('Error uploading file to S3:', error);
+    throw new Error('Failed to upload file to S3');
   }
 };
 
