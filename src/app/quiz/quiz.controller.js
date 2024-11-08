@@ -155,9 +155,13 @@ export const generatingQuizByLink = async (req, res, next) => {
             });
 
             if (saveQuiz) {
-              await generatePdfWithInjectedData(newQuizData, email);
+              const pdfURL = await generatePdfWithInjectedData(
+                newQuizData,
+                email
+              );
               return res.status(200).json({
                 message: 'Quiz generated Successfully',
+                pdfURL,
                 data: saveQuiz,
               });
             }

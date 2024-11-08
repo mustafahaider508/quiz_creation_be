@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import 'dotenv/config';
 import session from 'express-session';
 
 dotenv.config({ silent: process.env.NODE_ENV === 'production' });
