@@ -7,6 +7,7 @@ import quizService from './quiz.service.js';
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
+import { uploadPDFeToS3 } from '../../../utils/utils.js';
 // import process from 'process';
 const { generateQuiz, generateQuizfromYoutube, createCanvaDesign } =
   quizServive;
@@ -124,6 +125,52 @@ export const generatingQuizByLink = async (req, res, next) => {
 
           mp3Response.data.pipe(writer);
 
+          setTimeout(async () => {
+            const audioFileBuffer = await fs.promises.readFile(filePath);
+            const audioFile = {
+              originalname: path.basename(filePath),
+              buffer: audioFileBuffer,
+              mimetype: 'audio/mpeg',
+            };
+            const audioURL = await uploadPDFeToS3(audioFile);
+
+            console.log('audio file uploaded', audioURL);
+            setTimeout(async () => {
+              console.log(
+                'hit',
+                quizfile?.downloadUrl,
+                no_of_questions,
+                difficulty_level
+              );
+              // const url = `https://quiz.codistandemos.org/quiz_creation_youtube?youtube_url=${quizfile?.downloadUrl}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+              const url = `https://quiz.codistandemos.org/quiz_creation_youtube?no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+
+              const quiz = await generateQuizfromYoutube(url, filePath);
+
+              const newQuizData = makeQuizDataFormate(quiz.data);
+              const saveQuiz = await prisma.quiz.create({
+                data: {
+                  userId,
+                  quizData: newQuizData,
+                },
+              });
+
+              if (saveQuiz) {
+                const pdfURL = await generatePdfWithInjectedData(
+                  newQuizData,
+                  email
+                );
+
+                return res.status(200).json({
+                  message: 'Quiz generated Successfully',
+                  pdfURL,
+                  audioURL,
+                  data: saveQuiz,
+                });
+              }
+            }, 5000);
+          }, 3000);
+
           // return new Promise((resolve, reject) => {
           //   writer.on('finish', () => {
           //     console.log('File downloaded successfully:', filePath);
@@ -134,38 +181,6 @@ export const generatingQuizByLink = async (req, res, next) => {
           //     reject(new Error('Failed to save file.'));
           //   });
           // });
-          setTimeout(async () => {
-            console.log(
-              'hit',
-              quizfile?.downloadUrl,
-              no_of_questions,
-              difficulty_level
-            );
-            // const url = `https://quiz.codistandemos.org/quiz_creation_youtube?youtube_url=${quizfile?.downloadUrl}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
-            const url = `https://quiz.codistandemos.org/quiz_creation_youtube?no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
-
-            const quiz = await generateQuizfromYoutube(url, filePath);
-
-            const newQuizData = makeQuizDataFormate(quiz.data);
-            const saveQuiz = await prisma.quiz.create({
-              data: {
-                userId,
-                quizData: newQuizData,
-              },
-            });
-
-            if (saveQuiz) {
-              const pdfURL = await generatePdfWithInjectedData(
-                newQuizData,
-                email
-              );
-              return res.status(200).json({
-                message: 'Quiz generated Successfully',
-                pdfURL,
-                data: saveQuiz,
-              });
-            }
-          }, 5000);
         }, 10000);
       } catch (error) {
         if (axios.isAxiosError(error)) {
