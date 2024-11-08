@@ -180,7 +180,6 @@ export const uploadPDFeToS3 = async (file) => {
       Bucket: process.env.S3_BUCKET,
       Key: `${folderName}/${fileName}`,
       Body: file.buffer,
-      ACL: 'public-read',
       ContentType: file.mimetype,
     };
 
