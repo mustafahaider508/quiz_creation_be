@@ -233,11 +233,13 @@ export async function injectDataIntoSlide(auth, quizData) {
 
   const slide = slides[0]; // Use the first slide for all questions
 
+  console.log('slides', slides);
   // Filter and map text boxes
   const textBoxIds = slide.pageElements
     .filter((el) => el.shape && el.shape.shapeType === 'TEXT_BOX') // Ensure it's a text box
     .map((el) => el.objectId);
 
+  console.log('IDs...........', textBoxIds);
   if (!textBoxIds || textBoxIds.length === 0) {
     console.log('No text boxes found on the slide.');
     return;
