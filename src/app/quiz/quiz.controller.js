@@ -9,8 +9,12 @@ import path from 'path';
 import fs from 'fs';
 import { uploadPDFeToS3 } from '../../../utils/utils.js';
 // import process from 'process';
-const { generateQuiz, generateQuizfromYoutube, createCanvaDesign } =
-  quizServive;
+const {
+  generateQuiz,
+  generateQuizfromYoutube,
+  createCanvaDesign,
+  generatePdfWithInjectedDataYoutube,
+} = quizServive;
 
 export const getCanvaTemplate = async (req, res) => {
   try {
@@ -156,7 +160,7 @@ export const generatingQuizByLink = async (req, res, next) => {
               });
 
               if (saveQuiz) {
-                const pdfURL = await generatePdfWithInjectedData(
+                const pdfURL = await generatePdfWithInjectedDataYoutube(
                   newQuizData,
                   email
                 );
@@ -215,9 +219,12 @@ export const generatingQuizByFile = async (req, res, next) => {
         userId,
       },
     });
+    console.log(quiz, 'making quiz format');
     const quizData = await makeQuizDataFormate(quiz?.quizData);
+
     if (quizData) {
-      await generatePdfWithInjectedData(quizData, email);
+      console.log('injecting quiz Data');
+      await generatePdfWithInjectedDataYoutube(quizData, email);
     }
     return res.status(200).json({
       message: 'Quiz generated Successfully',
