@@ -119,6 +119,60 @@ export const sendEmail = (data) => {
   });
 };
 
+export const sendTextEmail = (data) => {
+  return new Promise((resolve, reject) => {
+    const transporter = nodemailer.createTransport({
+      service: 'Gmail',
+      host: process.env.GMAILHOST,
+      port: process.env.GMAILPORT,
+      auth: {
+        user: process.env.SENDER,
+        pass: process.env.GMAILPASS,
+      },
+    });
+
+    const pdfs = data?.pdfFilePath?.map((pdfItem, index) => {
+      // Handle both Buffer and file path cases
+      if (Buffer.isBuffer(pdfItem)) {
+        return {
+          filename: `pre${index + 1}.pdf`,
+          content: pdfItem, // Use Buffer content for attachments
+          contentType: 'application/pdf',
+        };
+      } else if (typeof pdfItem === 'string') {
+        // Assume it's a file path and use the `path` key
+        return {
+          filename: `pre${index + 1}.pdf`,
+          path: pdfItem, // Use the file path directly for attachments
+          contentType: 'application/pdf',
+        };
+      } else {
+        console.error(`Invalid PDF item at index ${index}:`, pdfItem);
+        throw new Error(`Invalid PDF item at index ${index}`);
+      }
+    });
+
+    const mailOptions = {
+      from: `${process.env.FROM}`,
+      to: data?.to,
+      subject: data?.subject,
+      text: '',
+      html: data?.html,
+      attachments: pdfs,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+        reject(error);
+      } else {
+        console.log('Message sent: %s', info.messageId);
+        resolve();
+      }
+    });
+  });
+};
+
 export const sendResponse = (req, res, status, message, data) => {
   return res.status(status).json({
     status,
@@ -198,6 +252,7 @@ const authUtils = {
   getPasswordHash,
   matchPassword,
   sendEmail,
+  sendTextEmail,
   verifyToken,
   generatePassword,
 };

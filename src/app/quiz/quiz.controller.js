@@ -14,6 +14,7 @@ const {
   generateQuizfromYoutube,
   createCanvaDesign,
   generatePdfWithInjectedDataYoutube,
+  generatePdfWithInjectedTextDataYoutube,
 } = quizServive;
 
 export const getCanvaTemplate = async (req, res) => {
@@ -40,7 +41,8 @@ export const generatingQuizByText = async (req, res, next) => {
     });
     const quizData = await makeQuizDataFormate(quiz?.data);
     if (quizData) {
-      await generatePdfWithInjectedData(quizData, email);
+      console.log('hello');
+      await generatePdfWithInjectedTextDataYoutube(quizData, email);
       return res.status(200).json({
         message: 'Quiz generated Successfully ',
         data: saveQuiz,
@@ -62,7 +64,7 @@ export const updatingQuizByText = async (req, res, next) => {
     const quizData = await makeQuizDataFormate(quiz?.data);
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     if (quizData) {
-      await generatePdfWithInjectedData(quizData, email);
+      await generatePdfWithInjectedTextDataYoutube(quizData, email);
       return res.status(200).json({
         message: 'Quiz generated Successfully ',
         data: editQuiz,
@@ -99,16 +101,22 @@ export const generatingQuizByLink = async (req, res, next) => {
         const validatedLink = downloadLink.trim();
         console.log('Attempting to download from:', validatedLink);
 
-        // Set a timeout for the request (e.g., 10 seconds)
+        // Set a timeout for the request (e.g., 10 seconds)Fatta
         setTimeout(async () => {
-          const mp3Response = await axios.get(validatedLink, {
-            responseType: 'stream',
-          });
-          if (mp3Response.status !== 200) {
-            throw new Error(
-              `Failed to download file: HTTP status ${mp3Response.status}`
-            );
+          let mp3Response = '';
+          try {
+            mp3Response = await axios.get(validatedLink, {
+              responseType: 'stream',
+            });
+          } catch (error) {
+            console.log(error.message);
           }
+
+          // if (mp3Response.status !== 200) {
+          //   throw new Error(
+          //     `Failed to download file: HTTP status ${mp3Response.status}`
+          //   );
+          // }
 
           const contentType = mp3Response.headers['content-type'];
           if (!contentType.includes('audio')) {
@@ -150,7 +158,7 @@ export const generatingQuizByLink = async (req, res, next) => {
               const url = `https://quiz.codistandemos.org/quiz_creation_youtube?no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
 
               const quiz = await generateQuizfromYoutube(url, filePath);
-
+              console.log('quiz response from AI', quiz);
               const newQuizData = makeQuizDataFormate(quiz.data);
               const saveQuiz = await prisma.quiz.create({
                 data: {
@@ -185,7 +193,7 @@ export const generatingQuizByLink = async (req, res, next) => {
           //     reject(new Error('Failed to save file.'));
           //   });
           // });
-        }, 10000);
+        }, 20000);
       } catch (error) {
         if (axios.isAxiosError(error)) {
           // Check if the error is a timeout or network issue
