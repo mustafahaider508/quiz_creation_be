@@ -99,7 +99,7 @@ export const generatingQuizByLink = async (req, res, next) => {
         const validatedLink = downloadLink.trim();
         console.log('Attempting to download from:', validatedLink);
 
-        // Set a timeout for the request (e.g., 10 seconds)
+        // Set a timeout for the request (e.g., 10 seconds)Fatta
         setTimeout(async () => {
           const mp3Response = await axios.get(validatedLink, {
             responseType: 'stream',
@@ -150,7 +150,7 @@ export const generatingQuizByLink = async (req, res, next) => {
               const url = `https://quiz.codistandemos.org/quiz_creation_youtube?no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
 
               const quiz = await generateQuizfromYoutube(url, filePath);
-
+              console.log('quiz response from AI', quiz);
               const newQuizData = makeQuizDataFormate(quiz.data);
               const saveQuiz = await prisma.quiz.create({
                 data: {

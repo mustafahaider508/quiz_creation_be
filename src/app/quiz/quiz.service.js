@@ -200,6 +200,7 @@ const generateQuizfromYoutube = async (url, filePath) => {
       timeout: 600000, // Increase timeout for large file uploads
     });
 
+    console.log('asdf', response);
     if (response.status !== 200) {
       throw new Error(`Unexpected response status: ${response.status}`);
     }
