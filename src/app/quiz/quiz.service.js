@@ -7,6 +7,7 @@ import {
 import {
   handleAxiosError,
   sendEmail,
+  sendTextEmail,
   uploadPDFeToS3,
 } from '../../../utils/utils.js';
 import path from 'path';
@@ -16,6 +17,71 @@ import prisma from '../../../config/db.js';
 import FormData from 'form-data';
 import { PDFDocument } from 'pdf-lib';
 
+export const generatePdfWithInjectedTextDataYoutube = async (
+  quizData,
+  email
+) => {
+  const auth = await authorize();
+  const injectResponse = await injectDataIntoSlide(auth, quizData);
+  console.log('injectResponse++', injectResponse);
+
+  if (injectResponse) {
+    // Generate an array of file paths for the PDFs
+    const pdfFilePaths = injectResponse.map((ele) =>
+      path.join(process.cwd(), `/uploads/${ele}.pdf`)
+    );
+
+    try {
+      // Merge all PDFs into a single PDF
+      const mergedPdf = await PDFDocument.create();
+
+      for (const pdfFilePath of pdfFilePaths) {
+        // Ensure the file exists before reading
+        await fs.promises.access(pdfFilePath, fs.constants.F_OK);
+
+        // Load the PDF to merge
+        const pdfBytes = await fs.promises.readFile(pdfFilePath);
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+
+        // Copy each page from the current PDF into the merged PDF
+        const copiedPages = await mergedPdf.copyPages(
+          pdfDoc,
+          pdfDoc.getPageIndices()
+        );
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
+      }
+
+      // Write the merged PDF to a new file
+      const mergedPdfPath = path.join(
+        process.cwd(),
+        `/uploads/merged_quiz.pdf`
+      );
+      const mergedPdfBytes = await mergedPdf.save();
+      await fs.promises.writeFile(mergedPdfPath, mergedPdfBytes);
+
+      // Send the merged PDF via email
+      const emailData = {
+        to: email,
+        subject: 'Quiz',
+        html: '',
+        pdfFilePath: [mergedPdfPath], // Send the merged PDF only
+      };
+      console.log('Merged PDF path:', mergedPdfPath);
+      await sendTextEmail(emailData);
+
+      const pdfFile = {
+        originalname: 'merged_quiz.pdf',
+        buffer: mergedPdfBytes,
+        mimetype: 'application/pdf',
+      };
+      const pdfURL = await uploadPDFeToS3(pdfFile);
+      console.log('File Uploded succesfully', pdfURL);
+      return pdfURL;
+    } catch (error) {
+      console.error('Error merging PDFs or sending email:', error);
+    }
+  }
+};
 export const generatePdfWithInjectedDataYoutube = async (quizData, email) => {
   const auth = await authorize();
   const injectResponse = await injectDataIntoSlide(auth, quizData);
@@ -137,6 +203,7 @@ export const generatePdfWithInjectedData = async (quizData, email) => {
     }
   }
 };
+
 export const makeQuizDataFormate = (quizData) => {
   const data = quizData['QUIZ QUESTIONS & ANSWERS']?.map((ele, index) => {
     const question = ele[`Question ${index + 1}`];
@@ -336,6 +403,7 @@ const convertVideoToMp3 = async ({ youtubeUrl, formate }) => {
 const quizService = {
   generateQuiz,
   generateQuizfromYoutube,
+  generatePdfWithInjectedTextDataYoutube,
   generatePdfWithInjectedDataYoutube,
   createCanvaDesign,
   generateQuizbyFile,
