@@ -204,6 +204,133 @@ export const listSlides = async (auth) => {
 //   }
 // }
 
+
+export async function injectDataIntoSlideAnswers(auth, quizData) {
+  const presentationId = '1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM';
+  const sheetId = '1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0';
+  const sheetName = 'Ark1';
+  const sheetsService = google.sheets({ version: 'v4', auth });
+  const slidesService = google.slides({ version: 'v1', auth });
+
+  // Fetch data from Google Sheets
+  const sheetResponse = await sheetsService.spreadsheets.values.get({
+    spreadsheetId: sheetId,
+    range: `${sheetName}!A1:Z1000`,
+  });
+
+  const data = sheetResponse.data.values;
+
+  if (!data || data.length === 0) {
+    console.log('No data found in the sheet.');
+    return;
+  }
+
+  // Fetch slides from the presentation
+  const slides = await listSlides(auth, presentationId);
+  if (!slides || slides.length === 0) {
+    console.log('No slides found in the presentation.');
+    return;
+  }
+
+  const slide = slides[0]; // Use the first slide for all questions
+
+  console.log('slides', slides);
+  // Filter and map text boxes
+  const textBoxIds = slide.pageElements
+    .filter((el) => el.shape && el.shape.shapeType === 'TEXT_BOX') // Ensure it's a text box
+    .map((el) => el.objectId);
+
+  console.log('IDs...........', textBoxIds);
+  if (!textBoxIds || textBoxIds.length === 0) {
+    console.log('No text boxes found on the slide.');
+    return;
+  }
+
+  let slidesArray = [];
+
+  // Process each question in `quizData`
+  for (let i = 0; i < quizData.length; i++) {
+    const rowData = quizData[i];
+    const requests = [];
+
+    // Clear existing text in all text boxes
+    textBoxIds.forEach((id) => {
+      requests.push({
+        deleteText: {
+          objectId: id,
+          textRange: {
+            type: 'ALL',
+          },
+        },
+      });
+    });
+
+    // Insert new text into text boxes
+    rowData.forEach((text, index) => {
+      if (index < textBoxIds.length) {
+        console.log(
+          `Inserting text "${text}" into TextBox ID: ${textBoxIds[index]}`
+        );
+        requests.push({
+          insertText: {
+            objectId: textBoxIds[index],
+            text,
+          },
+        });
+      }
+    });
+
+    // Apply text styling after inserting
+    requests.push(
+      ...textBoxIds.map((id) => ({
+        updateTextStyle: {
+          objectId: id,
+          style: {
+            fontSize: {
+              magnitude: 48,
+              unit: 'PT',
+            },
+            foregroundColor: {
+              opaqueColor: {
+                rgbColor: {
+                  red: 0,
+                  green: 0,
+                  blue: 0,
+                },
+              },
+            },
+            bold: true,
+            fontFamily: 'Trade Gothic',
+          },
+          fields: 'fontSize,foregroundColor,bold,fontFamily',
+        },
+      }))
+    );
+
+    // Execute the request for Google Slides API
+    await slidesService.presentations.batchUpdate({
+      presentationId,
+      resource: { requests },
+    });
+
+    let index = i;
+
+    console.log(`Question #${i + 1} inserted.`);
+    const pdfResponse = await exportSlidesToPDF(auth, index);
+
+    if (pdfResponse) {
+      slidesArray.push(`presentation_${index + 1}`);
+      console.log('pdfResponse', pdfResponse);
+    }
+  }
+
+  console.log('All questions processed.', slidesArray);
+  return slidesArray;
+}
+
+
+
+
 export async function injectDataIntoSlide(auth, quizData) {
   const presentationId = '1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM';
   const sheetId = '1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0';

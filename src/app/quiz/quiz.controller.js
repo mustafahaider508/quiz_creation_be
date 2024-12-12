@@ -251,7 +251,7 @@ export const updateQuizByFile = async (req, res, next) => {
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     const quizData = await makeQuizDataFormate(quiz);
     if (quizData) {
-      await generatePdfWithInjectedData(quizData, email);
+      await generatePdfWithInjectedDataYoutube(quizData, email);
     }
     return res.status(200).json({
       message: 'Quiz Re generated Successfully',
