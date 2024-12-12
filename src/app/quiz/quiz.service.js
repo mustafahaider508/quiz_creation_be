@@ -197,6 +197,8 @@ export const generatePdfWithInjectedData = async (quizData, email) => {
         pdfFilePath: buffer,
       };
       console.log('buffer++++>>', buffer?.length);
+      console.log('emailData+++',emailData)
+    
       await sendEmail(emailData);
     } else {
       console.error('No valid PDF buffers found; email not sent.');
