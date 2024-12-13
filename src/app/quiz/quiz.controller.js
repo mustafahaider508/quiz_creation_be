@@ -40,6 +40,7 @@ export const generatingQuizByText = async (req, res, next) => {
       },
     });
     const quizData = await makeQuizDataFormate(quiz?.data);
+    console?.log("quizData+++",quizData)
     if (quizData) {
       console.log('hello');
       await generatePdfWithInjectedTextDataYoutube(quizData, email);
