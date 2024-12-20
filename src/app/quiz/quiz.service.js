@@ -1,21 +1,23 @@
-import axios from 'axios';
+import axios from "axios";
 import {
   authorize,
   injectDataIntoSlide,
-  exportSlidesToPDF,
-} from '../../../utils/slide.js';
+  exportSlidesToPDF
+} from "../../../utils/slide.js";
 import {
   handleAxiosError,
+  sendAnswerSheetEmail,
   sendEmail,
   sendTextEmail,
   uploadPDFeToS3,
-} from '../../../utils/utils.js';
-import path from 'path';
-import fs from 'fs';
-import process from 'process';
-import prisma from '../../../config/db.js';
-import FormData from 'form-data';
-import { PDFDocument } from 'pdf-lib';
+} from "../../../utils/utils.js";
+import path from "path";
+import fs from "fs";
+import process from "process";
+import prisma from "../../../config/db.js";
+import FormData from "form-data";
+import { PDFDocument } from "pdf-lib";
+import { injectDataIntoSlideAnswers } from "../../../answerSlide.js";
 
 export const generatePdfWithInjectedTextDataYoutube = async (
   quizData,
@@ -23,7 +25,7 @@ export const generatePdfWithInjectedTextDataYoutube = async (
 ) => {
   const auth = await authorize();
   const injectResponse = await injectDataIntoSlide(auth, quizData);
-  console.log('injectResponse++', injectResponse);
+  console.log("injectResponse++", injectResponse);
 
   if (injectResponse) {
     // Generate an array of file paths for the PDFs
@@ -62,30 +64,30 @@ export const generatePdfWithInjectedTextDataYoutube = async (
       // Send the merged PDF via email
       const emailData = {
         to: email,
-        subject: 'Quiz',
-        html: '',
+        subject: "Quiz",
+        html: "",
         pdfFilePath: [mergedPdfPath], // Send the merged PDF only
       };
-      console.log('Merged PDF path:', mergedPdfPath);
+      console.log("Merged PDF path:", mergedPdfPath);
       await sendTextEmail(emailData);
 
       const pdfFile = {
-        originalname: 'merged_quiz.pdf',
+        originalname: "merged_quiz.pdf",
         buffer: mergedPdfBytes,
-        mimetype: 'application/pdf',
+        mimetype: "application/pdf",
       };
       const pdfURL = await uploadPDFeToS3(pdfFile);
-      console.log('File Uploded succesfully', pdfURL);
+      console.log("File Uploded succesfully", pdfURL);
       return pdfURL;
     } catch (error) {
-      console.error('Error merging PDFs or sending email:', error);
+      console.error("Error merging PDFs or sending email:", error);
     }
   }
 };
 export const generatePdfWithInjectedDataYoutube = async (quizData, email) => {
   const auth = await authorize();
   const injectResponse = await injectDataIntoSlide(auth, quizData);
-  console.log('injectResponse++', injectResponse);
+  console.log("injectResponse++", injectResponse);
 
   if (injectResponse) {
     // Generate an array of file paths for the PDFs
@@ -124,92 +126,90 @@ export const generatePdfWithInjectedDataYoutube = async (quizData, email) => {
       // Send the merged PDF via email
       const emailData = {
         to: email,
-        subject: 'Quiz',
-        html: '',
+        subject: "Quiz",
+        html: "",
         pdfFilePath: [mergedPdfPath], // Send the merged PDF only
       };
-      console.log('Merged PDF path:', mergedPdfPath);
+      console.log("Merged PDF path:", mergedPdfPath);
       await sendEmail(emailData);
 
       const pdfFile = {
-        originalname: 'merged_quiz.pdf',
+        originalname: "merged_quiz.pdf",
         buffer: mergedPdfBytes,
-        mimetype: 'application/pdf',
+        mimetype: "application/pdf",
       };
       const pdfURL = await uploadPDFeToS3(pdfFile);
-      console.log('File Uploded succesfully', pdfURL);
+      console.log("File Uploded succesfully", pdfURL);
       return pdfURL;
     } catch (error) {
-      console.error('Error merging PDFs or sending email:', error);
+      console.error("Error merging PDFs or sending email:", error);
     }
   }
 };
 
-export const generatePdfWithInjectedData = async (quizData, email) => {
+export const generatePdfAnswerSheet = async (newQuizData, email) => {
   const auth = await authorize();
-  const injectResponse = await injectDataIntoSlide(auth, quizData);
-  console.log('injectResponse++', injectResponse);
+  const injectResponse = await injectDataIntoSlideAnswers(auth, newQuizData);
+  console.log("injectResponse++", injectResponse);
 
   if (injectResponse) {
-    // Create an array to store the buffers for each PDF
-    const buffer = await Promise.all(
-      injectResponse.map((ele) => {
-        return new Promise((resolve, reject) => {
-          const pdfFilePath = path.join(process.cwd(), `/uploads/${ele}.pdf`);
+    try {
+      const pdfFilePath = path.join(
+        process.cwd(),
+        `/uploads/presentation_answerSheet.pdf`
+      );
 
-          // Check if the file exists before reading
-          fs.access(pdfFilePath, fs.constants.F_OK, (err) => {
+      // Wait for the file reading to complete
+      const buffer = await new Promise((resolve, reject) => {
+        fs.access(pdfFilePath, fs.constants.F_OK, (err) => {
+          if (err) {
+            console.log(`File not found: ${pdfFilePath}`);
+            return reject(new Error(`File not found: ${pdfFilePath}`));
+          }
+
+          // File exists, read it
+          fs.readFile(pdfFilePath, (err, pdfData) => {
             if (err) {
-              console.log(`File not found: ${pdfFilePath}`);
-              return reject(new Error(`File not found: ${pdfFilePath}`));
+              console.log("Error reading PDF file:", err);
+              return reject(err);
             }
 
-            // Read the file if it exists
-            fs.readFile(pdfFilePath, (err, pdfData) => {
-              if (err) {
-                console.log('Error reading PDF file:', err);
-                return reject(err);
-              }
-
-              // Log only if data is present
-              if (pdfData && pdfData.length > 0) {
-                console.log('Reading PDF File...', pdfData);
-                resolve(pdfData); // Resolve with the PDF data buffer
-              } else {
-                console.log(`Empty PDF buffer for file: ${pdfFilePath}`);
-                reject(new Error(`Empty buffer for file: ${pdfFilePath}`));
-              }
-            });
+            if (pdfData && pdfData.length > 0) {
+              console.log("Reading PDF File...", pdfData);
+              resolve(pdfData); // Resolve with the PDF data buffer
+            } else {
+              console.log(`Empty PDF buffer for file: ${pdfFilePath}`);
+              reject(new Error(`Empty buffer for file: ${pdfFilePath}`));
+            }
           });
         });
-      })
-    ).catch((err) => {
-      console.error('Error collecting PDF buffers:', err);
-      return [];
-    });
+      });
 
-    // Proceed only if all buffers are correctly read
-    if (buffer.length > 0) {
-      const emailData = {
-        to: email,
-        subject: 'Quiz',
-        html: '',
-        pdfFilePath: buffer,
-      };
-      console.log('buffer++++>>', buffer?.length);
-      console.log('emailData+++',emailData)
-    
-      await sendEmail(emailData);
-    } else {
-      console.error('No valid PDF buffers found; email not sent.');
+      // Proceed only if the buffer is correctly read
+      if (buffer && buffer.length > 0) {
+        const emailData = {
+          to: email,
+          subject: "Quiz",
+          html: "",
+          pdfFilePath: buffer,
+        };
+        console.log("buffer++++>>", buffer.length);
+        console.log("emailData+++", emailData);
+
+        await sendAnswerSheetEmail(emailData);
+      } else {
+        console.error("No valid PDF buffer found; email not sent.");
+      }
+    } catch (err) {
+      console.error("Error while handling PDF:", err);
     }
   }
 };
 
 export const makeQuizDataFormate = (quizData) => {
-  const data = quizData['QUIZ QUESTIONS & ANSWERS']?.map((ele, index) => {
+  const data = quizData["QUIZ QUESTIONS & ANSWERS"]?.map((ele, index) => {
     const question = ele[`Question ${index + 1}`];
-    const options = ele['Options'] ? Object.values(ele['Options']) : [];
+    const options = ele["Options"] ? Object.values(ele["Options"]) : [];
     return [(index + 1).toString(), question, ...options];
   });
   return data;
@@ -219,12 +219,12 @@ const generateQuiz = async (url) => {
   try {
     const response = await axios.post(url, {
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
     return response.data;
   } catch (error) {
-    console.error('Error generating quiz:', error);
+    console.error("Error generating quiz:", error);
     throw error;
   }
 };
@@ -232,32 +232,32 @@ const generateQuiz = async (url) => {
 const ensureFileExists = (filePath) => {
   return new Promise((resolve, reject) => {
     const fileStream = fs.createReadStream(filePath);
-    fileStream.on('open', () => resolve(filePath));
-    fileStream.on('error', (err) =>
+    fileStream.on("open", () => resolve(filePath));
+    fileStream.on("error", (err) =>
       reject(`Error reading file: ${err.message}`)
     );
   });
 };
 
 const generateQuizfromYoutube = async (url, filePath) => {
-  if (!url || typeof url !== 'string') {
-    throw new Error('A valid URL must be provided to generate the quiz.');
+  if (!url || typeof url !== "string") {
+    throw new Error("A valid URL must be provided to generate the quiz.");
   }
-  if (!filePath || typeof filePath !== 'string') {
-    throw new Error('A valid file path must be provided.');
+  if (!filePath || typeof filePath !== "string") {
+    throw new Error("A valid file path must be provided.");
   }
 
   try {
     // Ensure the file is fully created and accessible before proceeding
     await ensureFileExists(filePath);
-    console.log('File confirmed as existing:', filePath);
+    console.log("File confirmed as existing:", filePath);
 
     // Initialize FormData and attach the file
     const formData = new FormData();
-    formData.append('file', fs.createReadStream(filePath));
+    formData.append("file", fs.createReadStream(filePath));
 
-    console.log('Preparing request with URL:', url);
-    console.log('File path:', filePath);
+    console.log("Preparing request with URL:", url);
+    console.log("File path:", filePath);
 
     // Make POST request to the given URL with FormData
     const response = await axios.post(url, formData, {
@@ -269,19 +269,19 @@ const generateQuizfromYoutube = async (url, filePath) => {
       timeout: 600000, // Increase timeout for large file uploads
     });
 
-    console.log('asdf', response);
+    console.log("asdf", response);
     if (response.status !== 200) {
       throw new Error(`Unexpected response status: ${response.status}`);
     }
 
     const responseData = response.data;
-    if (!responseData || typeof responseData !== 'object') {
-      throw new Error('Received invalid response data from the server.');
+    if (!responseData || typeof responseData !== "object") {
+      throw new Error("Received invalid response data from the server.");
     }
 
     return responseData;
   } catch (error) {
-    console.error('Error in generateQuizfromYoutube:', error.response);
+    console.error("Error in generateQuizfromYoutube:", error.response);
     throw error;
   }
 };
@@ -298,13 +298,13 @@ const generateQuizbyFile = async (url, formData) => {
   try {
     const response = await axios.post(url, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
-        'Content-Type': 'application/json',
+        "Content-Type": "multipart/form-data",
+        "Content-Type": "application/json",
       },
     });
     return response.data;
   } catch (error) {
-    console.error('Error generating quiz:', error.message);
+    console.error("Error generating quiz:", error.message);
     throw error;
   }
 };
@@ -315,7 +315,7 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
       `https://api.canva.com/v1/designs/${templateId}/elements`,
       {
         elements: quizQuestions.map((question, index) => ({
-          type: 'TEXT',
+          type: "TEXT",
           text: question,
           x: 0,
           y: index * 100,
@@ -324,13 +324,13 @@ const createCanvaDesign = async (templateId, quizQuestions) => {
       {
         headers: {
           Authorization: `Bearer ${process.env.CANVA_API_KEY}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       }
     );
     return response.data;
   } catch (error) {
-    console.error('Error creating Canva design:', error);
+    console.error("Error creating Canva design:", error);
     throw error;
   }
 };
@@ -350,17 +350,17 @@ const editQuiz = ({ quizId, userId, quiz }) => {
 const saveFile = async (downloadLink) => {
   // try {
   // Extract the MP3 link from the response
-  console.log('downloadLink', downloadLink);
+  console.log("downloadLink", downloadLink);
   const mp3Link = downloadLink;
   if (!mp3Link) {
-    throw new Error('No valid MP3 link received from the API.');
+    throw new Error("No valid MP3 link received from the API.");
   }
 
   // Download the MP3 file using the link
-  const mp3Response = await axios.get(mp3Link, { responseType: 'stream' });
+  const mp3Response = await axios.get(mp3Link, { responseType: "stream" });
 
   // Define the path to save the MP3 file
-  const filePath = path.resolve('uploads', `${Date.now()}.mp3`);
+  const filePath = path.resolve("uploads", `${Date.now()}.mp3`);
 
   // Create a write stream to save the file
   const writer = fs.createWriteStream(filePath);
@@ -370,11 +370,11 @@ const saveFile = async (downloadLink) => {
 
   // Return a promise to handle the download completion
   return new Promise((resolve, reject) => {
-    writer.on('finish', () => {
-      console.log('File downloaded successfully:', filePath);
+    writer.on("finish", () => {
+      console.log("File downloaded successfully:", filePath);
       resolve(filePath); // Resolve with the file path
     });
-    writer.on('error', reject);
+    writer.on("error", reject);
   });
   // } catch (error) {
   //   console.log("Error occurs");
@@ -390,16 +390,32 @@ const convertVideoToMp3 = async ({ youtubeUrl, formate }) => {
       {},
       {
         headers: {
-          'Content-Type': 'application/json',
-          'x-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-          'x-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
+          "Content-Type": "application/json",
+          "x-RapidAPI-Key": process.env.RAPIDAPI_KEY,
+          "x-RapidAPI-Host": "youtube-to-mp315.p.rapidapi.com",
         },
       }
     );
     return response.data;
   } catch (error) {
-    console.log('Error occurs', error);
+    console.log("Error occurs", error);
   }
+};
+
+export const makeQuizAnswerSheetResponse = (data) => {
+  //Set The Data for AnswerSheet
+  const quizAnswers = data["QUIZ QUESTIONS & ANSWERS"].map((ele, index) => ({
+    question: ele[`Question ${index + 1}`] || "",
+    correctAnswer: ele?.Correct_answer || "",
+  }));
+  const limitedAnswers = quizAnswers.slice(0, 7);
+  const toFill = 8 - limitedAnswers.length;
+  const emptyEntries = Array.from({ length: toFill }, () => ({
+    question: "",
+    correctAnswer: "",
+  }));
+  const newQuizData = [...limitedAnswers, ...emptyEntries];
+  return newQuizData;
 };
 
 const quizService = {
