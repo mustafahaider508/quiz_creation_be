@@ -1,12 +1,12 @@
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
 // import fs from 'fs';
-import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import s3Client from '../config/s3.js';
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import s3Client from "../config/s3.js";
 
 // Get Password Hash
 export const getPasswordHash = async (password) => {
@@ -70,17 +70,17 @@ const generatePassword = (length) => {
   return Array.from(
     { length },
     () =>
-      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+'[
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+"[
         Math.floor(Math.random() * 72)
       ]
-  ).join('');
+  ).join("");
 };
 
 export const sendEmail = (data) => {
   return new Promise((resolve, reject) => {
     // Create a SMTP transporter object
     const transporter = nodemailer.createTransport({
-      service: 'Gmail',
+      service: "Gmail",
       host: process.env.GMAILHOST,
       port: process.env.GMAILPORT,
       auth: {
@@ -93,7 +93,7 @@ export const sendEmail = (data) => {
       return {
         filename: `pre${index + 1}.pdf`,
         path: filePath, // Use the file path directly to read it as an attachment
-        contentType: 'application/pdf',
+        contentType: "application/pdf",
       };
     });
 
@@ -102,7 +102,7 @@ export const sendEmail = (data) => {
       from: `${process.env.FROM}`,
       to: data?.to,
       subject: data?.subject,
-      text: '',
+      text: "",
       html: data?.html,
       attachments: pdfs,
     };
@@ -112,7 +112,48 @@ export const sendEmail = (data) => {
         console.log(error);
         reject(error);
       } else {
-        console.log('Message sent: %s', info.messageId);
+        console.log("Message sent: %s", info.messageId);
+        resolve();
+      }
+    });
+  });
+};
+
+export const sendAnswerSheetEmail = (data) => {
+  return new Promise((resolve, reject) => {
+    // Create a SMTP transporter object
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      host: process.env.GMAILHOST,
+      port: process.env.GMAILPORT,
+      auth: {
+        user: process.env.SENDER,
+        pass: process.env.GMAILPASS,
+      },
+    });
+
+    // Message object
+    let mailOptions = {
+      from: `${process.env.FROM}`,
+      to: data?.to,
+      subject: data?.subject,
+      text: "",
+      html: data?.html,
+      attachments: [
+        {
+          filename: `AnswerSheet.pdf`,
+          content: data?.pdfFilePath, // Use the file path directly to read it as an attachment
+          contentType: "application/pdf",
+        },
+      ],
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+        reject(error);
+      } else {
+        console.log("Message sent: %s", info.messageId);
         resolve();
       }
     });
@@ -122,7 +163,7 @@ export const sendEmail = (data) => {
 export const sendTextEmail = (data) => {
   return new Promise((resolve, reject) => {
     const transporter = nodemailer.createTransport({
-      service: 'Gmail',
+      service: "Gmail",
       host: process.env.GMAILHOST,
       port: process.env.GMAILPORT,
       auth: {
@@ -137,14 +178,14 @@ export const sendTextEmail = (data) => {
         return {
           filename: `pre${index + 1}.pdf`,
           content: pdfItem, // Use Buffer content for attachments
-          contentType: 'application/pdf',
+          contentType: "application/pdf",
         };
-      } else if (typeof pdfItem === 'string') {
+      } else if (typeof pdfItem === "string") {
         // Assume it's a file path and use the `path` key
         return {
           filename: `pre${index + 1}.pdf`,
           path: pdfItem, // Use the file path directly for attachments
-          contentType: 'application/pdf',
+          contentType: "application/pdf",
         };
       } else {
         console.error(`Invalid PDF item at index ${index}:`, pdfItem);
@@ -156,7 +197,7 @@ export const sendTextEmail = (data) => {
       from: `${process.env.FROM}`,
       to: data?.to,
       subject: data?.subject,
-      text: '',
+      text: "",
       html: data?.html,
       attachments: pdfs,
     };
@@ -166,7 +207,7 @@ export const sendTextEmail = (data) => {
         console.log(error);
         reject(error);
       } else {
-        console.log('Message sent: %s', info.messageId);
+        console.log("Message sent: %s", info.messageId);
         resolve();
       }
     });
@@ -191,7 +232,7 @@ export const sendError = (req, res, status, message) => {
 
 export const sendServerResponse = (req, res, status, error) => {
   return res.status(status).json({
-    message: 'server Error',
+    message: "server Error",
     error: error.message,
   });
 };
@@ -206,29 +247,29 @@ export const handleAxiosError = (error) => {
         `Quiz generation failed with status ${error.response.status}: ${error.response.data}`
       );
     } else if (error.request) {
-      console.error('No response received from the server');
+      console.error("No response received from the server");
       throw new Error(
-        'No response received from the server. Please try again.'
+        "No response received from the server. Please try again."
       );
-    } else if (error.code === 'ECONNABORTED') {
-      console.error('Request timed out');
-      throw new Error('The request timed out. Please try again later.');
+    } else if (error.code === "ECONNABORTED") {
+      console.error("Request timed out");
+      throw new Error("The request timed out. Please try again later.");
     }
-    console.error('Axios error:', error.message);
+    console.error("Axios error:", error.message);
     throw new Error(
-      'An error occurred while generating the quiz. Please try again.'
+      "An error occurred while generating the quiz. Please try again."
     );
   } else {
-    console.error('Unexpected error:', error.message);
-    throw new Error('An unexpected error occurred. Please try again.');
+    console.error("Unexpected error:", error.message);
+    throw new Error("An unexpected error occurred. Please try again.");
   }
 };
 
 export const uploadPDFeToS3 = async (file) => {
   try {
-    const fileExtension = file.originalname.split('.').pop();
+    const fileExtension = file.originalname.split(".").pop();
     const fileName = `${uuidv4()}.${fileExtension}`;
-    const folderName = 'files';
+    const folderName = "files";
 
     const params = {
       Bucket: process.env.S3_BUCKET,
@@ -242,8 +283,8 @@ export const uploadPDFeToS3 = async (file) => {
 
     return `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${folderName}/${fileName}`;
   } catch (error) {
-    console.error('Error uploading file to S3:', error);
-    throw new Error('Failed to upload file to S3');
+    console.error("Error uploading file to S3:", error);
+    throw new Error("Failed to upload file to S3");
   }
 };
 
