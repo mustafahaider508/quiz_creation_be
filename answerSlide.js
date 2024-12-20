@@ -231,7 +231,7 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData) {
               objectId: slideId,
               textRange: { type: "ALL" },
               style: {
-                fontSize: { magnitude: 6, unit: "PT" },
+                fontSize: { magnitude: 4, unit: "PT" },
                 bold: true,
                 fontFamily: "Arial",
                 foregroundColor: {
