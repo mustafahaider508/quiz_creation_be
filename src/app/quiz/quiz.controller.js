@@ -266,7 +266,7 @@ export const updateQuizByFile = async (req, res, next) => {
     const { quizId, userId, quiz, email } = req.body;
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     const quizData = await makeQuizDataFormate(quiz);
-    const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.quizData);
+    const quizAnswers = await makeQuizAnswerSheetResponse(quiz);
     if (quizData) {
       await generatePdfWithInjectedDataYoutube(quizData, email);
       await generatePdfAnswerSheet(quizAnswers, email);
