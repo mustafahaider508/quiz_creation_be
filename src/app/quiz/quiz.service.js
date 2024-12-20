@@ -408,7 +408,7 @@ export const makeQuizAnswerSheetResponse = (data) => {
     question: ele[`Question ${index + 1}`] || "",
     correctAnswer: ele?.Correct_answer || "",
   }));
-  const limitedAnswers = quizAnswers.slice(0, 7);
+  const limitedAnswers = quizAnswers.slice(0, 8);
   const toFill = 8 - limitedAnswers.length;
   const emptyEntries = Array.from({ length: toFill }, () => ({
     question: "",
