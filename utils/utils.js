@@ -4,9 +4,11 @@ import nodemailer from "nodemailer";
 // import fs from 'fs';
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
-
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import s3Client from "../config/s3.js";
+import fs from "fs";
+import path from "path";
+import { PDFDocument } from "pdf-lib";
 
 // Get Password Hash
 export const getPasswordHash = async (password) => {
@@ -176,14 +178,14 @@ export const sendTextEmail = (data) => {
       // Handle both Buffer and file path cases
       if (Buffer.isBuffer(pdfItem)) {
         return {
-          filename: `pre${index + 1}.pdf`,
+          filename: `Quiz${index + 1}.pdf`,
           content: pdfItem, // Use Buffer content for attachments
           contentType: "application/pdf",
         };
       } else if (typeof pdfItem === "string") {
         // Assume it's a file path and use the `path` key
         return {
-          filename: `pre${index + 1}.pdf`,
+          filename: `Quiz${index + 1}.pdf`,
           path: pdfItem, // Use the file path directly for attachments
           contentType: "application/pdf",
         };
@@ -285,6 +287,55 @@ export const uploadPDFeToS3 = async (file) => {
   } catch (error) {
     console.error("Error uploading file to S3:", error);
     throw new Error("Failed to upload file to S3");
+  }
+};
+
+
+export const mergeAndSendPDFs = async (email) => {
+  try {
+    // 1. Define the two static files in the uploads folder
+    const staticFilePaths = [
+      path.join(process.cwd(), "uploads", "merged_quiz.pdf"),
+      path.join(process.cwd(), "uploads", "presentation_answerSheet.pdf"),
+    ];
+    const allPdfPaths = [...staticFilePaths];
+    const mergedPdf = await PDFDocument.create();
+
+    // 4. Loop over all PDFs to merge
+    for (const pdfFilePath of allPdfPaths) {
+      await fs.promises.access(pdfFilePath, fs.constants.F_OK);
+
+      // Load the PDF to merge
+      const pdfBytes = await fs.promises.readFile(pdfFilePath);
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+
+      // Copy each page from the current PDF into the merged PDF
+      const copiedPages = await mergedPdf.copyPages(
+        pdfDoc,
+        pdfDoc.getPageIndices()
+      );
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+    }
+
+    // 5. Write the merged PDF to a new file in the uploads folder
+    const mergedPdfPath = path.join(process.cwd(), "uploads", "merged.pdf");
+    const mergedPdfBytes = await mergedPdf.save();
+    await fs.promises.writeFile(mergedPdfPath, mergedPdfBytes);
+
+    // 6. Prepare email data to send the merged PDF
+    const emailData = {
+      to: email,
+      subject: "Quiz",
+      html: "",
+      pdfFilePath: [mergedPdfPath],
+    };
+    console.log("Merged PDF path:", mergedPdfPath);
+
+    // Send the email (adapt to your actual function)
+    await sendTextEmail(emailData);
+  } catch (error) {
+    console.error("Error merging PDFs or sending email:", error);
+    throw error; // or handle the error as desired
   }
 };
 

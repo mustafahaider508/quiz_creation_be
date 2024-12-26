@@ -69,7 +69,7 @@ export const generatePdfWithInjectedTextDataYoutube = async (
         pdfFilePath: [mergedPdfPath], // Send the merged PDF only
       };
       console.log("Merged PDF path:", mergedPdfPath);
-      await sendTextEmail(emailData);
+      // await sendTextEmail(emailData);
 
       const pdfFile = {
         originalname: "merged_quiz.pdf",
@@ -131,7 +131,7 @@ export const generatePdfWithInjectedDataYoutube = async (quizData, email) => {
         pdfFilePath: [mergedPdfPath], // Send the merged PDF only
       };
       console.log("Merged PDF path:", mergedPdfPath);
-      await sendEmail(emailData);
+      // await sendEmail(emailData);
 
       const pdfFile = {
         originalname: "merged_quiz.pdf",
@@ -147,9 +147,9 @@ export const generatePdfWithInjectedDataYoutube = async (quizData, email) => {
   }
 };
 
-export const generatePdfAnswerSheet = async (newQuizData, email) => {
+export const generatePdfAnswerSheet = async (newQuizData, email,subject) => {
   const auth = await authorize();
-  const injectResponse = await injectDataIntoSlideAnswers(auth, newQuizData);
+  const injectResponse = await injectDataIntoSlideAnswers(auth, newQuizData,subject);
   console.log("injectResponse++", injectResponse);
 
   if (injectResponse) {
@@ -196,7 +196,7 @@ export const generatePdfAnswerSheet = async (newQuizData, email) => {
         console.log("buffer++++>>", buffer.length);
         console.log("emailData+++", emailData);
 
-        await sendAnswerSheetEmail(emailData);
+        // await sendAnswerSheetEmail(emailData);
       } else {
         console.error("No valid PDF buffer found; email not sent.");
       }

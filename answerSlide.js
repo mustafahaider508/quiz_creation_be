@@ -75,7 +75,6 @@ export const listSlides = async (auth) => {
   return slides;
 };
 
-
 //Get TEXT BOX ID OF PREVIOUS QUIZ
 async function getTextBoxIdsWithText(slideId, auth) {
   try {
@@ -112,7 +111,7 @@ async function getTextBoxIdsWithText(slideId, auth) {
   }
 }
 
-export async function injectDataIntoSlideAnswers(auth, newQuizData) {
+export async function injectDataIntoSlideAnswers(auth, newQuizData,subject) {
   const presentationId = "16AIM3vZltZfiRLdVdafa9oIfylkRujf8DVBy9UxnHOA";
   const sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
   const sheetName = "Ark1";
@@ -154,14 +153,21 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData) {
 
   console.log("textBoxIds", textBoxIds);
 
+  const updatedTextBoxIds = textBoxIds?.filter(
+    (ele) => ele !== "g321f3a02efa_0_0"
+  );
+
   // Assign 4 text boxes per quiz item: [QuestionBox, AnswerABox, AnswerBBox, AnswerCBox]
   const quizData = newQuizData.map((row, index) => ({
     question: row.question || "",
     correctAnswer: row.correctAnswer || "",
-    slides: textBoxIds.slice(index * 4, index * 4 + 4),
+    slides: updatedTextBoxIds.slice(index * 4, index * 4 + 4),
   }));
 
   const requests = [];
+
+  console.log("newQuizData",newQuizData)
+
 
   const getSlideIdForAnswer = (quiz, answer) => {
     // Assuming the order is [Question, A, B, C]
@@ -170,6 +176,22 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData) {
     if (answer === "c") return quiz.slides[3];
     return null;
   };
+
+  //SubjectTitle Delete
+  requests.push({
+    deleteText: {
+      objectId: "g321f3a02efa_0_0",
+      textRange: { type: "ALL" },
+    },
+  });
+
+  requests.push({
+    insertText: {
+      objectId: "g321f3a02efa_0_0",
+      text: subject,
+      insertionIndex: 0,
+    },
+  });
 
   for (const quiz of quizData) {
     for (let index = 0; index < quiz.slides.length; index++) {
@@ -214,6 +236,8 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData) {
             },
           });
         }
+
+        // Insert the new Subject Title
 
         // Insert the new text
         requests.push({
@@ -284,8 +308,6 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData) {
   return quizData;
 }
 
-
-
 export async function exportAnswerSlidesToPDF(auth) {
   try {
     // const presentationId = "1KDw6XIUJ7L6wxGt-WfCP8RjMkMf8_t6DelkfgUCp03k";
@@ -332,16 +354,3 @@ export async function exportAnswerSlidesToPDF(auth) {
     return { message: "Error exporting PDF", error };
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
