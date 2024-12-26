@@ -8,7 +8,7 @@ import quizService from "./quiz.service.js";
 import axios from "axios";
 import path from "path";
 import fs from "fs";
-import { uploadPDFeToS3 } from "../../../utils/utils.js";
+import { mergeAndSendPDFs, uploadPDFeToS3 } from "../../../utils/utils.js";
 import service from "../auth/auth.service.js";
 // import process from 'process';
 const {
@@ -32,9 +32,12 @@ export const getCanvaTemplate = async (req, res) => {
 };
 export const generatingQuizByText = async (req, res, next) => {
   try {
-    const { userId, text, no_of_questions, difficulty_level, email } = req.body;
+    const { userId, text, no_of_questions, difficulty_level, email, subject } =
+      req.body;
+    console.log("req.body", req.body);
     const url = `https://quiz.codistandemos.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url);
+    console.log("quiz++", quiz);
     const saveQuiz = await prisma.quiz.create({
       data: {
         userId,
@@ -49,7 +52,8 @@ export const generatingQuizByText = async (req, res, next) => {
       // Run the first task and wait for it to finish
       await generatePdfWithInjectedTextDataYoutube(quizData, email);
       // Once the first task is complete, run the second
-      await generatePdfAnswerSheet(quizAnswers, email);
+      await generatePdfAnswerSheet(quizAnswers, email,subject);
+      await mergeAndSendPDFs(email);
 
       // Now that both are done, send the response
       return res.status(200).json({
@@ -65,7 +69,7 @@ export const generatingQuizByText = async (req, res, next) => {
 // Update The Quiz by Text
 export const updatingQuizByText = async (req, res, next) => {
   try {
-    const { quizId, userId, text, no_of_questions, difficulty_level, email } =
+    const { quizId, userId, text, no_of_questions, difficulty_level, email,subject } =
       req.body;
 
     const url = `https://quiz.codistandemos.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
@@ -75,7 +79,8 @@ export const updatingQuizByText = async (req, res, next) => {
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     if (quizData) {
       await generatePdfWithInjectedTextDataYoutube(quizData, email);
-      await generatePdfAnswerSheet(quizAnswers, email);
+      await generatePdfAnswerSheet(quizAnswers, email,subject);
+      await mergeAndSendPDFs(email);
       return res.status(200).json({
         message: "Quiz generated Successfully ",
         data: editQuiz,
@@ -185,7 +190,8 @@ export const generatingQuizByLink = async (req, res, next) => {
                   newQuizData,
                   email
                 );
-                await generatePdfAnswerSheet(quizAnswers, email);
+                await generatePdfAnswerSheet(quizAnswers, email,subject);
+                await mergeAndSendPDFs(email);
 
                 return res.status(200).json({
                   message: "Quiz generated Successfully",
@@ -234,7 +240,7 @@ export const generatingQuizByLink = async (req, res, next) => {
 
 export const generatingQuizByFile = async (req, res, next) => {
   try {
-    const { userId, data, email } = req.body;
+    const { userId, data, email,subject } = req.body;
     const quiz = await prisma.quiz.create({
       data: {
         quizData: data,
@@ -248,7 +254,8 @@ export const generatingQuizByFile = async (req, res, next) => {
     if (quizData) {
       console.log("hello file");
       await generatePdfWithInjectedDataYoutube(quizData, email);
-      await generatePdfAnswerSheet(quizAnswers, email);
+      await generatePdfAnswerSheet(quizAnswers, email,subject);
+      await mergeAndSendPDFs(email);
     }
     return res.status(200).json({
       message: "Quiz generated Successfully",
@@ -263,13 +270,14 @@ export const generatingQuizByFile = async (req, res, next) => {
 //Update Quiz By File
 export const updateQuizByFile = async (req, res, next) => {
   try {
-    const { quizId, userId, quiz, email } = req.body;
+    const { quizId, userId, quiz, email,subject } = req.body;
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     const quizData = await makeQuizDataFormate(quiz);
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz);
     if (quizData) {
       await generatePdfWithInjectedDataYoutube(quizData, email);
-      await generatePdfAnswerSheet(quizAnswers, email);
+      await generatePdfAnswerSheet(quizAnswers, email,subject);
+      await mergeAndSendPDFs(email);
     }
     return res.status(200).json({
       message: "Quiz Re generated Successfully",
