@@ -134,16 +134,16 @@ export async function injectDataIntoSlide(auth, quizData, subject) {
         textRange: { type: "ALL" },
       },
     });
-  }
 
-  // Insert subject text only once
-  requests.push({
-    insertText: {
-      objectId: "g2a4cd3316e7_0_0",
-      text: subject,
-      insertionIndex: 0,
-    },
-  });
+    // Insert subject text only once
+    requests.push({
+      insertText: {
+        objectId: "g2a4cd3316e7_0_0",
+        text: subject,
+        insertionIndex: 0,
+      },
+    });
+  }
 
   // Execute the request for the subject text before processing quiz data
   await slidesService.presentations.batchUpdate({
