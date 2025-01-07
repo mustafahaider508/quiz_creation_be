@@ -111,6 +111,230 @@ async function getTextBoxIdsWithText(slideId, auth) {
   }
 }
 
+export async function getTextBoxContent(auth) {
+  const presentationId = "16AIM3vZltZfiRLdVdafa9oIfylkRujf8DVBy9UxnHOA";
+  // Fetch slides from the presentation
+  const slides = await listSlides(auth, presentationId);
+  if (!slides || slides.length === 0) {
+    console.log("No slides found in the presentation.");
+    return;
+  }
+
+  for (const slide of slides) {
+    const textBox = slide.pageElements.find(
+      (element) => element.objectId === "g321f3a02efa_0_0"
+    );
+
+    if (textBox && textBox.shape && textBox.shape.text) {
+      const textContent = textBox.shape.text.textElements
+        .map((element) => element.textRun?.content || "")
+        .join(""); // Combine all text runs
+      return textContent.trim(); // Return the text content
+    }
+  }
+
+  return null; // Return null if the text box is not found
+}
+
+// export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
+//   const presentationId = "16AIM3vZltZfiRLdVdafa9oIfylkRujf8DVBy9UxnHOA";
+//   const sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
+//   const sheetName = "Ark1";
+
+//   const sheetsService = google.sheets({ version: "v4", auth });
+//   const slidesService = google.slides({ version: "v1", auth });
+
+//   // Fetch data from Google Sheets
+//   const sheetResponse = await sheetsService.spreadsheets.values.get({
+//     spreadsheetId: sheetId,
+//     range: `${sheetName}!A1:Z1000`,
+//   });
+
+//   const data = sheetResponse.data.values;
+
+//   if (!data || data.length === 0) {
+//     console.error("No data found in the sheet.");
+//     return;
+//   }
+
+//   // Fetch slides from the presentation
+//   const slides = await listSlides(auth, presentationId);
+//   if (!slides || slides.length === 0) {
+//     console.error("No slides found in the presentation.");
+//     return;
+//   }
+
+//   const slide = slides[0];
+
+//   // Filter and map text box object IDs
+//   const textBoxIds = slide.pageElements
+//     .filter((el) => el.shape && el.shape.shapeType === "TEXT_BOX")
+//     .map((el) => el.objectId);
+
+//   if (!textBoxIds || textBoxIds.length === 0) {
+//     console.error("No text boxes found on the slide.");
+//     return;
+//   }
+
+//   console.log("textBoxIds", textBoxIds);
+
+//   const updatedTextBoxIds = textBoxIds?.filter(
+//     (ele) => ele !== "g321f3a02efa_0_0"
+//   );
+
+//   // Assign 4 text boxes per quiz item: [QuestionBox, AnswerABox, AnswerBBox, AnswerCBox]
+//   const quizData = newQuizData.map((row, index) => ({
+//     question: row.question || "",
+//     correctAnswer: row.correctAnswer || "",
+//     slides: updatedTextBoxIds.slice(index * 4, index * 4 + 4),
+//   }));
+
+//   const requests = [];
+
+//   console.log("newQuizData", newQuizData);
+
+//   const getSlideIdForAnswer = (quiz, answer) => {
+//     // Assuming the order is [Question, A, B, C]
+//     if (answer === "a") return quiz.slides[1];
+//     if (answer === "b") return quiz.slides[2];
+//     if (answer === "c") return quiz.slides[3];
+//     return null;
+//   };
+
+//   const subjectData = await getTextBoxContent(auth, presentationId, "g321f3a02efa_0_0");
+//   console.log("Current Subject Text:", subjectData);
+
+//   if (subject !== "") {
+//     requests.push({
+//       deleteText: {
+//         objectId: "g321f3a02efa_0_0",
+//         textRange: { type: "ALL" },
+//       },
+//     });
+
+//     requests.push({
+//       insertText: {
+//         objectId: "g321f3a02efa_0_0",
+//         text: subject,
+//         insertionIndex: 0,
+//       },
+//     });
+//   }
+//   for (const quiz of quizData) {
+//     for (let index = 0; index < quiz.slides.length; index++) {
+//       const slideId = quiz.slides[index];
+//       const textBoxIDs = await getTextBoxIdsWithText(slideId, auth); // IDs of text boxes that currently have text
+
+//       // Determine the new text to insert
+//       let newText = "";
+//       let isQuestionBox = index === 0;
+//       if (isQuestionBox) {
+//         newText = quiz.question;
+//       } else {
+//         const targetSlideId = getSlideIdForAnswer(quiz, quiz.correctAnswer);
+//         if (slideId === targetSlideId && quiz.correctAnswer) {
+//           newText = quiz.correctAnswer;
+//         } else {
+//           newText = "";
+//         }
+//       }
+
+//       const hasCurrentText = textBoxIDs && textBoxIDs.includes(slideId);
+
+//       // If there's no new text to insert, but the box currently has text, delete it to make it empty.
+//       if (!newText && hasCurrentText) {
+//         requests.push({
+//           deleteText: {
+//             objectId: slideId,
+//             textRange: { type: "ALL" },
+//           },
+//         });
+//         // No insertion or style update since it's set to empty
+//         continue;
+//       }
+
+//       // If there is new text, first delete existing text if any
+//       if (newText) {
+//         if (hasCurrentText) {
+//           requests.push({
+//             deleteText: {
+//               objectId: slideId,
+//               textRange: { type: "ALL" },
+//             },
+//           });
+//         }
+
+//         // Insert the new Subject Title
+
+//         // Insert the new text
+//         requests.push({
+//           insertText: {
+//             objectId: slideId,
+//             text: newText,
+//             insertionIndex: 0,
+//           },
+//         });
+
+//         // Update text style based on question or answer
+//         if (isQuestionBox) {
+//           requests.push({
+//             updateTextStyle: {
+//               objectId: slideId,
+//               textRange: { type: "ALL" },
+//               style: {
+//                 fontSize: { magnitude: 4, unit: "PT" },
+//                 bold: true,
+//                 fontFamily: "Arial",
+//                 foregroundColor: {
+//                   opaqueColor: { rgbColor: { red: 0, green: 0, blue: 0 } },
+//                 },
+//               },
+//               fields: "fontSize,foregroundColor,bold,fontFamily",
+//             },
+//           });
+//         } else {
+//           // It's an answer box
+//           // If it's the correct answer box we already inserted text
+//           // Style it only if newText was set (implies it's correct answer box)
+//           requests.push({
+//             updateTextStyle: {
+//               objectId: slideId,
+//               textRange: { type: "ALL" },
+//               style: {
+//                 fontSize: { magnitude: 8, unit: "PT" },
+//                 bold: true,
+//                 fontFamily: "Arial",
+//                 foregroundColor: {
+//                   opaqueColor: {
+//                     rgbColor: { red: 0.2, green: 0.2, blue: 0.8 },
+//                   },
+//                 },
+//               },
+//               fields: "fontSize,foregroundColor,bold,fontFamily",
+//             },
+//           });
+//         }
+//       }
+
+//       // If there's no new text and no current text, do nothing
+//     }
+//   }
+
+//   // Execute batch update for the slide requests
+//   if (requests.length > 0) {
+//     await slidesService.presentations.batchUpdate({
+//       presentationId,
+//       resource: { requests },
+//     });
+
+//     console.log("Data successfully inserted into slides.");
+//   } else {
+//     console.log("No changes needed.");
+//   }
+//   await exportAnswerSlidesToPDF(auth);
+//   return quizData;
+// }
+
 export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
   const presentationId = "16AIM3vZltZfiRLdVdafa9oIfylkRujf8DVBy9UxnHOA";
   const sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
@@ -176,14 +400,26 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
     return null;
   };
 
-  if (subject !== "") {
+  // Check if the subject text box has existing content
+  const subjectData = await getTextBoxContent(
+    auth,
+    presentationId,
+    "g321f3a02efa_0_0"
+  );
+  console.log("Current Subject Text:", subjectData);
+
+  if (subjectData !== null) {
     requests.push({
       deleteText: {
         objectId: "g321f3a02efa_0_0",
         textRange: { type: "ALL" },
       },
     });
-    
+  }
+
+  // Handle subject insertion
+  if (subject !== "") {
+    // Insert the new subject text
     requests.push({
       insertText: {
         objectId: "g321f3a02efa_0_0",
@@ -191,7 +427,8 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
         insertionIndex: 0,
       },
     });
-  } 
+  }
+
   for (const quiz of quizData) {
     for (let index = 0; index < quiz.slides.length; index++) {
       const slideId = quiz.slides[index];
@@ -221,7 +458,6 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
             textRange: { type: "ALL" },
           },
         });
-        // No insertion or style update since it's set to empty
         continue;
       }
 
@@ -235,8 +471,6 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
             },
           });
         }
-
-        // Insert the new Subject Title
 
         // Insert the new text
         requests.push({
@@ -265,9 +499,6 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
             },
           });
         } else {
-          // It's an answer box
-          // If it's the correct answer box we already inserted text
-          // Style it only if newText was set (implies it's correct answer box)
           requests.push({
             updateTextStyle: {
               objectId: slideId,
@@ -287,8 +518,6 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
           });
         }
       }
-
-      // If there's no new text and no current text, do nothing
     }
   }
 
@@ -303,6 +532,7 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
   } else {
     console.log("No changes needed.");
   }
+
   await exportAnswerSlidesToPDF(auth);
   return quizData;
 }
