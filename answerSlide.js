@@ -111,7 +111,7 @@ async function getTextBoxIdsWithText(slideId, auth) {
   }
 }
 
-export async function injectDataIntoSlideAnswers(auth, newQuizData,subject) {
+export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
   const presentationId = "16AIM3vZltZfiRLdVdafa9oIfylkRujf8DVBy9UxnHOA";
   const sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
   const sheetName = "Ark1";
@@ -166,8 +166,7 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData,subject) {
 
   const requests = [];
 
-  console.log("newQuizData",newQuizData)
-
+  console.log("newQuizData", newQuizData);
 
   const getSlideIdForAnswer = (quiz, answer) => {
     // Assuming the order is [Question, A, B, C]
@@ -178,12 +177,14 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData,subject) {
   };
 
   //SubjectTitle Delete
-  requests.push({
-    deleteText: {
-      objectId: "g321f3a02efa_0_0",
-      textRange: { type: "ALL" },
-    },
-  });
+  if (subject !== "") {
+    requests.push({
+      deleteText: {
+        objectId: "g321f3a02efa_0_0",
+        textRange: { type: "ALL" },
+      },
+    });
+  }
 
   requests.push({
     insertText: {

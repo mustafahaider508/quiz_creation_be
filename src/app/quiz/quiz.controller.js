@@ -9,7 +9,7 @@ import axios from "axios";
 import path from "path";
 import fs from "fs";
 import { mergeAndSendPDFs, uploadPDFeToS3 } from "../../../utils/utils.js";
-import service from "../auth/auth.service.js";
+
 // import process from 'process';
 const {
   generateQuiz,
@@ -34,10 +34,8 @@ export const generatingQuizByText = async (req, res, next) => {
   try {
     const { userId, text, no_of_questions, difficulty_level, email, subject } =
       req.body;
-    console.log("req.body", req.body);
     const url = `https://quiz.codistandemos.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url);
-    console.log("quiz++", quiz);
     const saveQuiz = await prisma.quiz.create({
       data: {
         userId,
@@ -48,11 +46,10 @@ export const generatingQuizByText = async (req, res, next) => {
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
 
     if (quizData) {
-      console.log("hello");
       // Run the first task and wait for it to finish
-      await generatePdfWithInjectedTextDataYoutube(quizData, email);
+      await generatePdfWithInjectedTextDataYoutube(quizData, email, subject);
       // Once the first task is complete, run the second
-      await generatePdfAnswerSheet(quizAnswers, email,subject);
+      await generatePdfAnswerSheet(quizAnswers, email, subject);
       await mergeAndSendPDFs(email);
 
       // Now that both are done, send the response
@@ -69,8 +66,15 @@ export const generatingQuizByText = async (req, res, next) => {
 // Update The Quiz by Text
 export const updatingQuizByText = async (req, res, next) => {
   try {
-    const { quizId, userId, text, no_of_questions, difficulty_level, email,subject } =
-      req.body;
+    const {
+      quizId,
+      userId,
+      text,
+      no_of_questions,
+      difficulty_level,
+      email,
+      subject,
+    } = req.body;
 
     const url = `https://quiz.codistandemos.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url, userId);
@@ -78,8 +82,8 @@ export const updatingQuizByText = async (req, res, next) => {
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     if (quizData) {
-      await generatePdfWithInjectedTextDataYoutube(quizData, email);
-      await generatePdfAnswerSheet(quizAnswers, email,subject);
+      await generatePdfWithInjectedTextDataYoutube(quizData, email, subject);
+      await generatePdfAnswerSheet(quizAnswers, email, subject);
       await mergeAndSendPDFs(email);
       return res.status(200).json({
         message: "Quiz generated Successfully ",
@@ -106,17 +110,12 @@ export const generatingQuizByLink = async (req, res, next) => {
       youtubeUrl,
       formate,
     });
-    console.log("quizfile++++", quizfile?.downloadUrl);
     if (quizfile) {
       const downloadLink = quizfile?.downloadUrl;
-
-      // quizService.saveFile(downloadLink);
 
       try {
         // Ensure the URL is clean and properly formatted
         const validatedLink = downloadLink.trim();
-        console.log("Attempting to download from:", validatedLink);
-
         // Set a timeout for the request (e.g., 10 seconds)Fatta
         setTimeout(async () => {
           let mp3Response = "";
@@ -127,12 +126,6 @@ export const generatingQuizByLink = async (req, res, next) => {
           } catch (error) {
             console.log(error.message);
           }
-
-          // if (mp3Response.status !== 200) {
-          //   throw new Error(
-          //     `Failed to download file: HTTP status ${mp3Response.status}`
-          //   );
-          // }
 
           const contentType = mp3Response.headers["content-type"];
           if (!contentType.includes("audio")) {
@@ -170,11 +163,8 @@ export const generatingQuizByLink = async (req, res, next) => {
                 no_of_questions,
                 difficulty_level
               );
-              // const url = `https://quiz.codistandemos.org/quiz_creation_youtube?youtube_url=${quizfile?.downloadUrl}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
               const url = `https://quiz.codistandemos.org/quiz_creation_youtube?no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
-
               const quiz = await generateQuizfromYoutube(url, filePath);
-              console.log("quiz response from AI", quiz);
               const newQuizData = makeQuizDataFormate(quiz.data);
               const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
               const saveQuiz = await prisma.quiz.create({
@@ -185,12 +175,12 @@ export const generatingQuizByLink = async (req, res, next) => {
               });
 
               if (saveQuiz) {
-                console.log("hello Link");
                 const pdfURL = await generatePdfWithInjectedDataYoutube(
                   newQuizData,
-                  email
+                  email,
+                  subject
                 );
-                await generatePdfAnswerSheet(quizAnswers, email,subject);
+                await generatePdfAnswerSheet(quizAnswers, email, subject);
                 await mergeAndSendPDFs(email);
 
                 return res.status(200).json({
@@ -202,17 +192,6 @@ export const generatingQuizByLink = async (req, res, next) => {
               }
             }, 5000);
           }, 3000);
-
-          // return new Promise((resolve, reject) => {
-          //   writer.on('finish', () => {
-          //     console.log('File downloaded successfully:', filePath);
-          //     resolve(filePath);
-          //   });
-          //   writer.on('error', (error) => {
-          //     console.error('Error writing file:', error.message);
-          //     reject(new Error('Failed to save file.'));
-          //   });
-          // });
         }, 20000);
       } catch (error) {
         if (axios.isAxiosError(error)) {
@@ -240,21 +219,19 @@ export const generatingQuizByLink = async (req, res, next) => {
 
 export const generatingQuizByFile = async (req, res, next) => {
   try {
-    const { userId, data, email,subject } = req.body;
+    const { userId, data, email, subject } = req.body;
     const quiz = await prisma.quiz.create({
       data: {
         quizData: data,
         userId,
       },
     });
-    console.log(quiz?.quizData, "making quiz format");
     const quizData = await makeQuizDataFormate(quiz?.quizData);
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.quizData);
 
     if (quizData) {
-      console.log("hello file");
-      await generatePdfWithInjectedDataYoutube(quizData, email);
-      await generatePdfAnswerSheet(quizAnswers, email,subject);
+      await generatePdfWithInjectedDataYoutube(quizData, email,subject);
+      await generatePdfAnswerSheet(quizAnswers, email, subject);
       await mergeAndSendPDFs(email);
     }
     return res.status(200).json({
@@ -270,13 +247,14 @@ export const generatingQuizByFile = async (req, res, next) => {
 //Update Quiz By File
 export const updateQuizByFile = async (req, res, next) => {
   try {
-    const { quizId, userId, quiz, email,subject } = req.body;
+    const { quizId, userId, quiz, email, subject } = req.body;
+    console.log("req.body++=",req.body)
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     const quizData = await makeQuizDataFormate(quiz);
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz);
     if (quizData) {
-      await generatePdfWithInjectedDataYoutube(quizData, email);
-      await generatePdfAnswerSheet(quizAnswers, email,subject);
+      await generatePdfWithInjectedDataYoutube(quizData, email,subject);
+      await generatePdfAnswerSheet(quizAnswers, email, subject);
       await mergeAndSendPDFs(email);
     }
     return res.status(200).json({

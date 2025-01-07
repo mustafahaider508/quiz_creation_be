@@ -76,9 +76,7 @@ export const listSlides = async (auth) => {
   return slides;
 };
 
-
-
-export async function injectDataIntoSlide(auth, quizData) {
+export async function injectDataIntoSlide(auth, quizData, subject) {
   const presentationId = "1BI345Zel1tdPoLEApARJhOM83pSB2lOLrwT_2v_DaRM";
   const sheetId = "1kKZA3fqjK5tbg0iFhfq6Fh3CAUFpfg1WYGUm9b9y-w0";
   const sheetName = "Ark1";
@@ -113,6 +111,10 @@ export async function injectDataIntoSlide(auth, quizData) {
     .filter((el) => el.shape && el.shape.shapeType === "TEXT_BOX") // Ensure it's a text box
     .map((el) => el.objectId);
 
+  const updatedTextBoxIds = textBoxIds?.filter(
+    (ele) => ele !== "g2a4cd3316e7_0_0"
+  );
+
   console.log("IDs...........", textBoxIds);
   if (!textBoxIds || textBoxIds.length === 0) {
     console.log("No text boxes found on the slide.");
@@ -121,14 +123,44 @@ export async function injectDataIntoSlide(auth, quizData) {
 
   let slidesArray = [];
 
+  // Requests array to hold batch requests
+  const requests = [];
+
+  //SubjectTitle Delete
+  if (subject !== "") {
+    requests.push({
+      deleteText: {
+        objectId: "g2a4cd3316e7_0_0",
+        textRange: { type: "ALL" },
+      },
+    });
+  }
+
+  // Insert subject text only once
+  requests.push({
+    insertText: {
+      objectId: "g2a4cd3316e7_0_0",
+      text: subject,
+      insertionIndex: 0,
+    },
+  });
+
+  // Execute the request for the subject text before processing quiz data
+  await slidesService.presentations.batchUpdate({
+    presentationId,
+    resource: { requests },
+  });
+
+  console.log("Subject inserted.");
+
   // Process each question in `quizData`
   for (let i = 0; i < quizData.length; i++) {
     const rowData = quizData[i];
-    const requests = [];
+    const questionRequests = [];
 
     // Clear existing text in all text boxes
-    textBoxIds.forEach((id) => {
-      requests.push({
+    updatedTextBoxIds.forEach((id) => {
+      questionRequests.push({
         deleteText: {
           objectId: id,
           textRange: {
@@ -140,13 +172,13 @@ export async function injectDataIntoSlide(auth, quizData) {
 
     // Insert new text into text boxes
     rowData.forEach((text, index) => {
-      if (index < textBoxIds.length) {
+      if (index < updatedTextBoxIds.length) {
         console.log(
-          `Inserting text "${text}" into TextBox ID: ${textBoxIds[index]}`
+          `Inserting text "${text}" into TextBox ID: ${updatedTextBoxIds[index]}`
         );
-        requests.push({
+        questionRequests.push({
           insertText: {
-            objectId: textBoxIds[index],
+            objectId: updatedTextBoxIds[index],
             text,
           },
         });
@@ -154,8 +186,8 @@ export async function injectDataIntoSlide(auth, quizData) {
     });
 
     // Apply text styling after inserting
-    requests.push(
-      ...textBoxIds.map((id) => ({
+    questionRequests.push(
+      ...updatedTextBoxIds.map((id) => ({
         updateTextStyle: {
           objectId: id,
           style: {
@@ -183,7 +215,7 @@ export async function injectDataIntoSlide(auth, quizData) {
     // Execute the request for Google Slides API
     await slidesService.presentations.batchUpdate({
       presentationId,
-      resource: { requests },
+      resource: { requests: questionRequests },
     });
 
     let index = i;
@@ -246,9 +278,6 @@ export async function exportSlidesToPDF(auth, index) {
     return { message: "Error exporting PDF", error };
   }
 }
-
-
-
 
 // Usage example:
 // You would call this function from your main script
