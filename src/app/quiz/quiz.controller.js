@@ -248,7 +248,7 @@ export const generatingQuizByFile = async (req, res, next) => {
 export const updateQuizByFile = async (req, res, next) => {
   try {
     const { quizId, userId, quiz, email, subject } = req.body;
-    console.log("req.body++=",req.body)
+    console.log("req.body",req.body)
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     const quizData = await makeQuizDataFormate(quiz);
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz);
