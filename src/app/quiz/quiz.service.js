@@ -21,10 +21,11 @@ import { injectDataIntoSlideAnswers } from "../../../answerSlide.js";
 
 export const generatePdfWithInjectedTextDataYoutube = async (
   quizData,
-  email
+  email,
+  subject
 ) => {
   const auth = await authorize();
-  const injectResponse = await injectDataIntoSlide(auth, quizData);
+  const injectResponse = await injectDataIntoSlide(auth, quizData,subject);
   console.log("injectResponse++", injectResponse);
 
   if (injectResponse) {
@@ -84,9 +85,9 @@ export const generatePdfWithInjectedTextDataYoutube = async (
     }
   }
 };
-export const generatePdfWithInjectedDataYoutube = async (quizData, email) => {
+export const generatePdfWithInjectedDataYoutube = async (quizData, email,subject) => {
   const auth = await authorize();
-  const injectResponse = await injectDataIntoSlide(auth, quizData);
+  const injectResponse = await injectDataIntoSlide(auth, quizData,subject);
   console.log("injectResponse++", injectResponse);
 
   if (injectResponse) {
