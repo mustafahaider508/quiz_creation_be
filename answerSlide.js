@@ -176,7 +176,6 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
     return null;
   };
 
-  //SubjectTitle Delete
   if (subject !== "") {
     requests.push({
       deleteText: {
@@ -184,7 +183,7 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
         textRange: { type: "ALL" },
       },
     });
-
+    
     requests.push({
       insertText: {
         objectId: "g321f3a02efa_0_0",
@@ -192,8 +191,7 @@ export async function injectDataIntoSlideAnswers(auth, newQuizData, subject) {
         insertionIndex: 0,
       },
     });
-  }
-
+  } 
   for (const quiz of quizData) {
     for (let index = 0; index < quiz.slides.length; index++) {
       const slideId = quiz.slides[index];
