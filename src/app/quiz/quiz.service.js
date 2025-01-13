@@ -19,120 +19,42 @@ import FormData from "form-data";
 import { PDFDocument } from "pdf-lib";
 import { injectDataIntoSlideAnswers } from "../../../answerSlide.js";
 
-// export const generatePdfWithInjectedTextDataYoutube = async (
-//   quizData,
-//   email,
-//   subject
-// ) => {
-//   const auth = await authorize();
-//   const injectResponse = await injectDataIntoSlide(auth, quizData,subject);
-//   console.log("injectResponse++", injectResponse);
-
-//   if (injectResponse) {
-//     // Generate an array of file paths for the PDFs
-//     const pdfFilePaths = injectResponse.map((ele) =>
-//       path.join(process.cwd(), `/uploads/${ele}.pdf`)
-//     );
-
-//     try {
-//       // Merge all PDFs into a single PDF
-//       const mergedPdf = await PDFDocument.create();
-
-//       for (const pdfFilePath of pdfFilePaths) {
-//         // Ensure the file exists before reading
-//         await fs.promises.access(pdfFilePath, fs.constants.F_OK);
-
-//         // Load the PDF to merge
-//         const pdfBytes = await fs.promises.readFile(pdfFilePath);
-//         const pdfDoc = await PDFDocument.load(pdfBytes);
-
-//         // Copy each page from the current PDF into the merged PDF
-//         const copiedPages = await mergedPdf.copyPages(
-//           pdfDoc,
-//           pdfDoc.getPageIndices()
-//         );
-//         copiedPages.forEach((page) => mergedPdf.addPage(page));
-//       }
-
-//       // Write the merged PDF to a new file
-//       const mergedPdfPath = path.join(
-//         process.cwd(),
-//         `/uploads/merged_quiz.pdf`
-//       );
-//       const mergedPdfBytes = await mergedPdf.save();
-//       await fs.promises.writeFile(mergedPdfPath, mergedPdfBytes);
-
-//       // Send the merged PDF via email
-//       const emailData = {
-//         to: email,
-//         subject: "Quiz",
-//         html: "",
-//         pdfFilePath: [mergedPdfPath], // Send the merged PDF only
-//       };
-//       console.log("Merged PDF path:", mergedPdfPath);
-//       // await sendTextEmail(emailData);
-
-//       const pdfFile = {
-//         originalname: "merged_quiz.pdf",
-//         buffer: mergedPdfBytes,
-//         mimetype: "application/pdf",
-//       };
-//       const pdfURL = await uploadPDFeToS3(pdfFile);
-//       console.log("File Uploded succesfully", pdfURL);
-//       return pdfURL;
-//     } catch (error) {
-//       console.error("Error merging PDFs or sending email:", error);
-//     }
-//   }
-// };
-
 export const generatePdfWithInjectedTextDataYoutube = async (
   quizData,
   email,
   subject
 ) => {
   const auth = await authorize();
-  const injectResponse = await injectDataIntoSlide(auth, quizData, subject);
+  const injectResponse = await injectDataIntoSlide(auth, quizData,subject);
   console.log("injectResponse++", injectResponse);
 
   if (injectResponse) {
+    // Generate an array of file paths for the PDFs
     const pdfFilePaths = injectResponse.map((ele) =>
       path.join(process.cwd(), `/uploads/${ele}.pdf`)
     );
 
     try {
+      // Merge all PDFs into a single PDF
       const mergedPdf = await PDFDocument.create();
 
-      const standardWidth = 595.28; // A4 width in points
-      const standardHeight = 841.89; // A4 height in points
-
       for (const pdfFilePath of pdfFilePaths) {
+        // Ensure the file exists before reading
         await fs.promises.access(pdfFilePath, fs.constants.F_OK);
 
+        // Load the PDF to merge
         const pdfBytes = await fs.promises.readFile(pdfFilePath);
         const pdfDoc = await PDFDocument.load(pdfBytes);
 
-        const copiedPages = await pdfDoc.getPages();
-
-        for (const page of copiedPages) {
-          const [newPage] = await mergedPdf.copyPages(pdfDoc, [page.getIndex()]);
-
-          // Resize the page to match the standard size
-          newPage.setWidth(standardWidth);
-          newPage.setHeight(standardHeight);
-
-          // Scale the page content to fit within the new size
-          const { width, height } = page.getSize();
-          const xScale = standardWidth / width;
-          const yScale = standardHeight / height;
-          const scale = Math.min(xScale, yScale);
-
-          newPage.scaleContent(scale, scale);
-
-          mergedPdf.addPage(newPage);
-        }
+        // Copy each page from the current PDF into the merged PDF
+        const copiedPages = await mergedPdf.copyPages(
+          pdfDoc,
+          pdfDoc.getPageIndices()
+        );
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
       }
 
+      // Write the merged PDF to a new file
       const mergedPdfPath = path.join(
         process.cwd(),
         `/uploads/merged_quiz.pdf`
@@ -140,13 +62,15 @@ export const generatePdfWithInjectedTextDataYoutube = async (
       const mergedPdfBytes = await mergedPdf.save();
       await fs.promises.writeFile(mergedPdfPath, mergedPdfBytes);
 
+      // Send the merged PDF via email
       const emailData = {
         to: email,
         subject: "Quiz",
         html: "",
-        pdfFilePath: [mergedPdfPath],
+        pdfFilePath: [mergedPdfPath], // Send the merged PDF only
       };
       console.log("Merged PDF path:", mergedPdfPath);
+      // await sendTextEmail(emailData);
 
       const pdfFile = {
         originalname: "merged_quiz.pdf",
@@ -154,13 +78,15 @@ export const generatePdfWithInjectedTextDataYoutube = async (
         mimetype: "application/pdf",
       };
       const pdfURL = await uploadPDFeToS3(pdfFile);
-      console.log("File Uploaded successfully", pdfURL);
+      console.log("File Uploded succesfully", pdfURL);
       return pdfURL;
     } catch (error) {
       console.error("Error merging PDFs or sending email:", error);
     }
   }
 };
+
+
 export const generatePdfWithInjectedDataYoutube = async (quizData, email,subject) => {
   const auth = await authorize();
   const injectResponse = await injectDataIntoSlide(auth, quizData,subject);
