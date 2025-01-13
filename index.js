@@ -60,10 +60,6 @@ app.use('/api/quiz', quizRouter);
 
 
 
-
-
-
-
 // ==== Error Handling ==== //
 app.use((err, req, res, next) => {
   console.error(err.stack);
