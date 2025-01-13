@@ -290,54 +290,180 @@ export const uploadPDFeToS3 = async (file) => {
   }
 };
 
-
 export const mergeAndSendPDFs = async (email) => {
   try {
-    // 1. Define the two static files in the uploads folder
     const staticFilePaths = [
       path.join(process.cwd(), "uploads", "merged_quiz.pdf"),
       path.join(process.cwd(), "uploads", "presentation_answerSheet.pdf"),
     ];
-    const allPdfPaths = [...staticFilePaths];
+
     const mergedPdf = await PDFDocument.create();
 
-    // 4. Loop over all PDFs to merge
-    for (const pdfFilePath of allPdfPaths) {
+    const standardWidth = 595.28; // A4 width in points
+    const standardHeight = 841.89; // A4 height in points
+
+    const templateWidth = 1260; // Desired static width for the template content
+    const templateHeight = 870; // Desired static height for the template content
+
+    for (const pdfFilePath of staticFilePaths) {
       await fs.promises.access(pdfFilePath, fs.constants.F_OK);
 
-      // Load the PDF to merge
       const pdfBytes = await fs.promises.readFile(pdfFilePath);
       const pdfDoc = await PDFDocument.load(pdfBytes);
 
-      // Copy each page from the current PDF into the merged PDF
-      const copiedPages = await mergedPdf.copyPages(
-        pdfDoc,
-        pdfDoc.getPageIndices()
-      );
-      copiedPages.forEach((page) => mergedPdf.addPage(page));
+      const pages = pdfDoc.getPages();
+
+      for (let i = 0; i < pages.length; i++) {
+        const [copiedPage] = await mergedPdf.copyPages(pdfDoc, [i]);
+
+        const { width: originalWidth, height: originalHeight } =
+          pages[i].getSize();
+
+        // Maintain standard A4 page size for all pages
+        const targetWidth = standardWidth;
+        const targetHeight = standardHeight;
+
+        if (pdfFilePath.includes("presentation_answerSheet.pdf")) {
+          // Custom scaling and adjustments for presentation_answerSheet.pdf
+          const xScale = templateWidth / targetWidth;
+          const yScale = targetHeight / originalHeight;
+          const scale = Math.min(xScale, yScale);
+
+          copiedPage.setWidth(targetWidth);
+          copiedPage.setHeight(targetHeight);
+
+          copiedPage.scaleContent(xScale, yScale);
+
+          // Center the scaled content on the page
+          copiedPage.translateContent(
+            (templateWidth - originalWidth * scale) / 2, // Horizontal centering
+            (templateHeight - originalHeight * scale) / 2 // Vertical centering
+          );
+        } else {
+          // Standard scaling for other PDFs
+          const xScale = targetWidth / originalWidth;
+          const yScale = targetHeight / originalHeight;
+          const scale = Math.min(xScale, yScale);
+
+          copiedPage.setWidth(targetWidth);
+          copiedPage.setHeight(targetHeight);
+
+          copiedPage.translateContent(
+            (targetWidth - originalWidth * scale) / 2,
+            (targetHeight - originalHeight * scale) / 2
+          );
+
+          copiedPage.scaleContent(scale, scale);
+        }
+
+        mergedPdf.addPage(copiedPage);
+      }
     }
 
-    // 5. Write the merged PDF to a new file in the uploads folder
     const mergedPdfPath = path.join(process.cwd(), "uploads", "merged.pdf");
     const mergedPdfBytes = await mergedPdf.save();
     await fs.promises.writeFile(mergedPdfPath, mergedPdfBytes);
 
-    // 6. Prepare email data to send the merged PDF
     const emailData = {
       to: email,
-      subject: "Quiz",
+      subject: "Quiz and Answer Sheet",
       html: "",
       pdfFilePath: [mergedPdfPath],
     };
+
     console.log("Merged PDF path:", mergedPdfPath);
 
-    // Send the email (adapt to your actual function)
     await sendTextEmail(emailData);
   } catch (error) {
     console.error("Error merging PDFs or sending email:", error);
-    throw error; // or handle the error as desired
+    throw error;
   }
 };
+
+// export const mergeAndSendPDFs = async (email) => {
+//   try {
+//     // File paths for merging
+//     const staticFilePaths = [
+//       path.join(process.cwd(), "uploads", "merged_quiz.pdf"),
+//       path.join(process.cwd(), "uploads", "presentation_answerSheet.pdf"),
+//     ];
+
+//     // Create a new PDF document
+//     const mergedPdf = await PDFDocument.create();
+
+//     // Define standard A4 page size
+//     const standardWidth = 595.28; // A4 width in points
+//     const standardHeight = 841.89; // A4 height in points
+
+//     // Define static scaling for the last page's template (content)
+//     const templateWidth = 600; // Desired static width for the template content
+//     const templateHeight = 700; // Desired static height for the template content
+
+//     for (let fileIndex = 0; fileIndex < staticFilePaths.length; fileIndex++) {
+//       const pdfFilePath = staticFilePaths[fileIndex];
+
+//       // Check if the file exists
+//       await fs.promises.access(pdfFilePath, fs.constants.F_OK);
+
+//       // Load the current PDF file
+//       const pdfBytes = await fs.promises.readFile(pdfFilePath);
+//       const pdfDoc = await PDFDocument.load(pdfBytes);
+
+//       const pages = pdfDoc.getPages();
+
+//       for (let i = 0; i < pages.length; i++) {
+//         const [copiedPage] = await mergedPdf.copyPages(pdfDoc, [i]);
+
+//         // Keep the page size fixed to A4
+//         copiedPage.setWidth(standardWidth);
+//         copiedPage.setHeight(standardHeight);
+
+//         // Check if it's the last page (Answer Sheet)
+//         if (fileIndex === staticFilePaths.length - 1 && i === pages.length - 1) {
+//           // Scale the template (content inside the page) to static dimensions
+//           const { width: originalWidth, height: originalHeight } =
+//             pages[i].getSize();
+
+//           const xScale = templateWidth / originalWidth; // Static width scaling
+//           const yScale = templateHeight / originalHeight; // Static height scaling
+
+//           // Apply scaling to the content (template)
+//           copiedPage.scaleContent(xScale, yScale);
+
+//           // Center the scaled content on the page
+//           copiedPage.translateContent(
+//             (standardWidth - templateWidth) / 2, // Horizontal centering
+//             (standardHeight - templateHeight) / 2 // Vertical centering
+//           );
+//         }
+
+//         // Add the page to the merged PDF
+//         mergedPdf.addPage(copiedPage);
+//       }
+//     }
+
+//     // Save the merged PDF to a new file
+//     const mergedPdfPath = path.join(process.cwd(), "uploads", "merged.pdf");
+//     const mergedPdfBytes = await mergedPdf.save();
+//     await fs.promises.writeFile(mergedPdfPath, mergedPdfBytes);
+
+//     // Send the merged PDF via email
+//     const emailData = {
+//       to: email,
+//       subject: "Quiz and Answer Sheet",
+//       html: "",
+//       pdfFilePath: [mergedPdfPath],
+//     };
+
+//     console.log("Merged PDF path:", mergedPdfPath);
+
+//     // Use your existing email sending function
+//     await sendTextEmail(emailData);
+//   } catch (error) {
+//     console.error("Error merging PDFs or sending email:", error);
+//     throw error;
+//   }
+// };
 
 const authUtils = {
   getToken,
