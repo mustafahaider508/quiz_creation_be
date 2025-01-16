@@ -34,7 +34,7 @@ export const generatingQuizByText = async (req, res, next) => {
   // try {
     const { userId, text, no_of_questions, difficulty_level, email, subject } =
       req.body;
-    const url = `https://quiz.codistandemos.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const url = `https://backend.skilltrack.fun/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url);
     const saveQuiz = await prisma.quiz.create({
       data: {
@@ -76,7 +76,7 @@ export const updatingQuizByText = async (req, res, next) => {
       subject,
     } = req.body;
 
-    const url = `https://quiz.codistandemos.org/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const url = `https://backend.skilltrack.fun/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
     const quiz = await generateQuiz(url, userId);
     const quizData = await makeQuizDataFormate(quiz?.data);
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
@@ -110,12 +110,14 @@ export const generatingQuizByLink = async (req, res, next) => {
       youtubeUrl,
       formate,
     });
+    console.log("quizfile++",quizfile)
     if (quizfile) {
       const downloadLink = quizfile?.downloadUrl;
 
       try {
         // Ensure the URL is clean and properly formatted
         const validatedLink = downloadLink.trim();
+        console.log('validatedLink',validatedLink)
         // Set a timeout for the request (e.g., 10 seconds)Fatta
         setTimeout(async () => {
           let mp3Response = "";
@@ -126,6 +128,8 @@ export const generatingQuizByLink = async (req, res, next) => {
           } catch (error) {
             console.log(error.message);
           }
+
+          console.log("mp3Response+++",mp3Response)
 
           const contentType = mp3Response.headers["content-type"];
           if (!contentType.includes("audio")) {
@@ -163,7 +167,7 @@ export const generatingQuizByLink = async (req, res, next) => {
                 no_of_questions,
                 difficulty_level
               );
-              const url = `https://quiz.codistandemos.org/quiz_creation_youtube?no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+              const url = `https://backend.skilltrack.fun/quiz_creation_youtube?no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
               const quiz = await generateQuizfromYoutube(url, filePath);
               const newQuizData = makeQuizDataFormate(quiz.data);
               const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
