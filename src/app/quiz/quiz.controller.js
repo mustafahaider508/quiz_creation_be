@@ -31,7 +31,7 @@ export const getCanvaTemplate = async (req, res) => {
   }
 };
 export const generatingQuizByText = async (req, res, next) => {
-  // try {
+  try {
     const { userId, text, no_of_questions, difficulty_level, email, subject } =
       req.body;
     const url = `https://backend.skilltrack.fun/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
@@ -58,9 +58,11 @@ export const generatingQuizByText = async (req, res, next) => {
         data: saveQuiz,
       });
     }
-  // } catch (error) {
-  //   res.status(500).json({ error: error, message: "Internal Server Error" });
-  // }
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: error, message: "Internal Server Error" });
+  }
 };
 
 // Update The Quiz by Text
@@ -110,14 +112,14 @@ export const generatingQuizByLink = async (req, res, next) => {
       youtubeUrl,
       formate,
     });
-    console.log("quizfile++",quizfile)
+    console.log("quizfile++", quizfile);
     if (quizfile) {
       const downloadLink = quizfile?.downloadUrl;
 
       try {
         // Ensure the URL is clean and properly formatted
         const validatedLink = downloadLink.trim();
-        console.log('validatedLink',validatedLink)
+        console.log("validatedLink", validatedLink);
         // Set a timeout for the request (e.g., 10 seconds)Fatta
         setTimeout(async () => {
           let mp3Response = "";
@@ -129,7 +131,7 @@ export const generatingQuizByLink = async (req, res, next) => {
             console.log(error.message);
           }
 
-          console.log("mp3Response+++",mp3Response)
+          console.log("mp3Response+++", mp3Response);
 
           const contentType = mp3Response.headers["content-type"];
           if (!contentType.includes("audio")) {
@@ -234,7 +236,7 @@ export const generatingQuizByFile = async (req, res, next) => {
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.quizData);
 
     if (quizData) {
-      await generatePdfWithInjectedDataYoutube(quizData, email,subject);
+      await generatePdfWithInjectedDataYoutube(quizData, email, subject);
       await generatePdfAnswerSheet(quizAnswers, email, subject);
       await mergeAndSendPDFs(email);
     }
@@ -252,12 +254,12 @@ export const generatingQuizByFile = async (req, res, next) => {
 export const updateQuizByFile = async (req, res, next) => {
   try {
     const { quizId, userId, quiz, email, subject } = req.body;
-    console.log("req.body",req.body)
+    console.log("req.body", req.body);
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     const quizData = await makeQuizDataFormate(quiz);
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz);
     if (quizData) {
-      await generatePdfWithInjectedDataYoutube(quizData, email,subject);
+      await generatePdfWithInjectedDataYoutube(quizData, email, subject);
       await generatePdfAnswerSheet(quizAnswers, email, subject);
       await mergeAndSendPDFs(email);
     }
