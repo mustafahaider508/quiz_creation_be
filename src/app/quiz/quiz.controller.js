@@ -112,10 +112,8 @@ export const generatingQuizByLink = async (req, res, next) => {
       youtubeUrl,
       formate,
     });
-    console.log("quizfile++", quizfile);
     if (quizfile) {
       const downloadLink = quizfile?.downloadUrl;
-
       try {
         // Ensure the URL is clean and properly formatted
         const validatedLink = downloadLink.trim();
@@ -131,9 +129,7 @@ export const generatingQuizByLink = async (req, res, next) => {
             console.log(error.message);
           }
 
-          console.log("mp3Response+++", mp3Response);
-
-          const contentType = mp3Response.headers["content-type"];
+          const contentType = mp3Response?.headers?.["content-type"];
           if (!contentType.includes("audio")) {
             throw new Error(
               `Unexpected content type: ${contentType}. Expected an audio file.`
