@@ -32,32 +32,32 @@ export const getCanvaTemplate = async (req, res) => {
 };
 export const generatingQuizByText = async (req, res, next) => {
   // try {
-    const { userId, text, no_of_questions, difficulty_level, email, subject } =
-      req.body;
-    const url = `https://backend.skilltrack.fun/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
-    const quiz = await generateQuiz(url);
-    const saveQuiz = await prisma.quiz.create({
-      data: {
-        userId,
-        quizData: quiz?.data,
-      },
+  const { userId, text, no_of_questions, difficulty_level, email, subject } =
+    req.body;
+  const url = `https://backend.skilltrack.fun/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+  const quiz = await generateQuiz(url);
+  const saveQuiz = await prisma.quiz.create({
+    data: {
+      userId,
+      quizData: quiz?.data,
+    },
+  });
+  const quizData = await makeQuizDataFormate(quiz?.data);
+  const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
+
+  if (quizData) {
+    // Run the first task and wait for it to finish
+    await generatePdfWithInjectedTextDataYoutube(quizData, email, subject);
+    // Once the first task is complete, run the second
+    await generatePdfAnswerSheet(quizAnswers, email, subject);
+    await mergeAndSendPDFs(email);
+
+    // Now that both are done, send the response
+    return res.status(200).json({
+      message: "Quiz generated Successfully",
+      data: saveQuiz,
     });
-    const quizData = await makeQuizDataFormate(quiz?.data);
-    const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
-
-    if (quizData) {
-      // Run the first task and wait for it to finish
-      await generatePdfWithInjectedTextDataYoutube(quizData, email, subject);
-      // Once the first task is complete, run the second
-      await generatePdfAnswerSheet(quizAnswers, email, subject);
-      await mergeAndSendPDFs(email);
-
-      // Now that both are done, send the response
-      return res.status(200).json({
-        message: "Quiz generated Successfully",
-        data: saveQuiz,
-      });
-    }
+  }
   // } catch (error) {
   //   res.status(500).json({ error: error, message: "Internal Server Error" });
   // }
@@ -110,14 +110,12 @@ export const generatingQuizByLink = async (req, res, next) => {
       youtubeUrl,
       formate,
     });
-    console.log("quizfile++",quizfile)
     if (quizfile) {
       const downloadLink = quizfile?.downloadUrl;
 
       try {
         // Ensure the URL is clean and properly formatted
         const validatedLink = downloadLink.trim();
-        console.log('validatedLink',validatedLink)
         // Set a timeout for the request (e.g., 10 seconds)Fatta
         setTimeout(async () => {
           let mp3Response = "";
@@ -128,10 +126,7 @@ export const generatingQuizByLink = async (req, res, next) => {
           } catch (error) {
             console.log(error.message);
           }
-
-          console.log("mp3Response+++",mp3Response)
-
-          const contentType = mp3Response.headers["content-type"];
+          const contentType = mp3Response?.headers?.["content-type"];
           if (!contentType.includes("audio")) {
             throw new Error(
               `Unexpected content type: ${contentType}. Expected an audio file.`
@@ -234,7 +229,7 @@ export const generatingQuizByFile = async (req, res, next) => {
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.quizData);
 
     if (quizData) {
-      await generatePdfWithInjectedDataYoutube(quizData, email,subject);
+      await generatePdfWithInjectedDataYoutube(quizData, email, subject);
       await generatePdfAnswerSheet(quizAnswers, email, subject);
       await mergeAndSendPDFs(email);
     }
@@ -252,12 +247,12 @@ export const generatingQuizByFile = async (req, res, next) => {
 export const updateQuizByFile = async (req, res, next) => {
   try {
     const { quizId, userId, quiz, email, subject } = req.body;
-    console.log("req.body",req.body)
+    console.log("req.body", req.body);
     const editQuiz = await quizService.editQuiz({ quizId, userId, quiz });
     const quizData = await makeQuizDataFormate(quiz);
     const quizAnswers = await makeQuizAnswerSheetResponse(quiz);
     if (quizData) {
-      await generatePdfWithInjectedDataYoutube(quizData, email,subject);
+      await generatePdfWithInjectedDataYoutube(quizData, email, subject);
       await generatePdfAnswerSheet(quizAnswers, email, subject);
       await mergeAndSendPDFs(email);
     }
