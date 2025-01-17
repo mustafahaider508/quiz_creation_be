@@ -31,36 +31,38 @@ export const getCanvaTemplate = async (req, res) => {
   }
 };
 export const generatingQuizByText = async (req, res, next) => {
-  // try {
-  const { userId, text, no_of_questions, difficulty_level, email, subject } =
-    req.body;
-  const url = `https://backend.skilltrack.fun/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
-  const quiz = await generateQuiz(url);
-  const saveQuiz = await prisma.quiz.create({
-    data: {
-      userId,
-      quizData: quiz?.data,
-    },
-  });
-  const quizData = await makeQuizDataFormate(quiz?.data);
-  const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
-
-  if (quizData) {
-    // Run the first task and wait for it to finish
-    await generatePdfWithInjectedTextDataYoutube(quizData, email, subject);
-    // Once the first task is complete, run the second
-    await generatePdfAnswerSheet(quizAnswers, email, subject);
-    await mergeAndSendPDFs(email);
-
-    // Now that both are done, send the response
-    return res.status(200).json({
-      message: "Quiz generated Successfully",
-      data: saveQuiz,
+  try {
+    const { userId, text, no_of_questions, difficulty_level, email, subject } =
+      req.body;
+    const url = `https://backend.skilltrack.fun/quiz_creation_text?text=${text}&no_of_questions=${no_of_questions}&difficulty_level=${difficulty_level}`;
+    const quiz = await generateQuiz(url);
+    const saveQuiz = await prisma.quiz.create({
+      data: {
+        userId,
+        quizData: quiz?.data,
+      },
     });
+    const quizData = await makeQuizDataFormate(quiz?.data);
+    const quizAnswers = await makeQuizAnswerSheetResponse(quiz?.data);
+
+    if (quizData) {
+      // Run the first task and wait for it to finish
+      await generatePdfWithInjectedTextDataYoutube(quizData, email, subject);
+      // Once the first task is complete, run the second
+      await generatePdfAnswerSheet(quizAnswers, email, subject);
+      await mergeAndSendPDFs(email);
+
+      // Now that both are done, send the response
+      return res.status(200).json({
+        message: "Quiz generated Successfully",
+        data: saveQuiz,
+      });
+    }
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: error, message: "Internal Server Error" });
   }
-  // } catch (error) {
-  //   res.status(500).json({ error: error, message: "Internal Server Error" });
-  // }
 };
 
 // Update The Quiz by Text
@@ -112,7 +114,6 @@ export const generatingQuizByLink = async (req, res, next) => {
     });
     if (quizfile) {
       const downloadLink = quizfile?.downloadUrl;
-
       try {
         // Ensure the URL is clean and properly formatted
         const validatedLink = downloadLink.trim();
